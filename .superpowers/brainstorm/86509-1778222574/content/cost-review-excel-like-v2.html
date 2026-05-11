@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Cost Review - Excel-like Mockup</title>
+  <style>
+    :root {
+      --bg: #f3f5f7;
+      --panel: #ffffff;
+      --ink: #18212b;
+      --muted: #687684;
+      --line: #cfd8e2;
+      --line-soft: #e8eef3;
+      --header: #25313d;
+      --gold: #fff2cc;
+      --blue: #2167c7;
+      --green: #14845a;
+      --red: #be3b32;
+      --amber: #a66a00;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      letter-spacing: 0;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: 52px 58px 1fr;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 18px;
+      background: var(--header);
+      color: #fff;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand strong {
+      font-size: 16px;
+      white-space: nowrap;
+    }
+
+    .month-chip {
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255,255,255,.88);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(260px, 360px) minmax(160px, 210px) minmax(160px, 210px) 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .field {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .input,
+    .select {
+      min-width: 0;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      padding: 0 10px;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .input.search {
+      border-color: #8fb5e9;
+      box-shadow: 0 0 0 3px rgba(33,103,199,.12);
+      font-weight: 700;
+    }
+
+    .kpis {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .kpi {
+      min-width: 86px;
+      padding: 6px 9px;
+      border: 1px solid var(--line-soft);
+      border-radius: 6px;
+      background: #fafbfc;
+    }
+
+    .kpi b {
+      display: block;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.1;
+    }
+
+    .kpi span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    .button {
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      padding: 0 11px;
+      color: var(--ink);
+      font-weight: 800;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      min-height: 0;
+      padding: 14px 18px 18px;
+      gap: 14px;
+    }
+
+    .sheet-wrap,
+    .side-panel {
+      min-height: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .sheet-caption {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 38px;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfd;
+    }
+
+    .sheet-caption strong {
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .caption-note {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .sheet-scroll {
+      overflow: auto;
+      height: calc(100vh - 182px);
+    }
+
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 1880px;
+      width: 1880px;
+      background: #fff;
+      font-size: 12px;
+    }
+
+    th,
+    td {
+      height: 38px;
+      border-right: 1px solid var(--line-soft);
+      border-bottom: 1px solid var(--line-soft);
+      padding: 0 8px;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #eef3f8;
+      color: #324252;
+      font-size: 11px;
+      font-weight: 900;
+      text-align: left;
+    }
+
+    .freeze {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      background: #fff;
+      box-shadow: 1px 0 0 var(--line-soft);
+    }
+
+    th.freeze {
+      z-index: 4;
+      background: #e5edf5;
+    }
+
+    .col-k {
+      width: 68px;
+      text-align: center;
+      background: var(--gold);
+      font-weight: 900;
+    }
+
+    th.col-k {
+      background: #f6df91;
+    }
+
+    .num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .account {
+      max-width: 244px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .reviewer {
+      color: #0f4c9a;
+      font-weight: 800;
+    }
+
+    .v-check {
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border: 1px solid #88c5a8;
+      border-radius: 5px;
+      background: #e3f8ee;
+      color: var(--green);
+      font-weight: 900;
+    }
+
+    .empty-check {
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border: 1px solid #d3dde6;
+      border-radius: 5px;
+      background: #fff;
+      color: #b7c1cb;
+    }
+
+    .current {
+      background: #f7fbff;
+      color: #0b4f9d;
+      font-weight: 900;
+    }
+
+    .diff-up {
+      color: var(--green);
+      font-weight: 900;
+    }
+
+    .diff-down {
+      color: var(--red);
+      font-weight: 900;
+    }
+
+    .evidence-btn {
+      height: 26px;
+      border: 1px solid #b8c9da;
+      border-radius: 5px;
+      background: #fff;
+      color: #25435f;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .verify-btn {
+      height: 26px;
+      border: 0;
+      border-radius: 5px;
+      background: var(--green);
+      color: #fff;
+      padding: 0 8px;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .flag {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      padding: 0 7px;
+      border-radius: 999px;
+      background: #fff4d6;
+      color: var(--amber);
+      font-weight: 900;
+      font-size: 11px;
+    }
+
+    .side-panel {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .side-head {
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfd;
+    }
+
+    .side-head h2 {
+      margin: 0 0 4px;
+      font-size: 17px;
+      letter-spacing: 0;
+    }
+
+    .side-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .side-body {
+      overflow: auto;
+      padding: 14px;
+    }
+
+    .card {
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .card-title {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line-soft);
+      background: #fbfcfd;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .metric {
+      padding: 9px;
+      border: 1px solid var(--line-soft);
+      border-radius: 6px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      margin-bottom: 4px;
+    }
+
+    .metric b {
+      display: block;
+      color: var(--ink);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .spark {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 4px;
+      align-items: end;
+      height: 84px;
+      padding: 12px;
+      border-top: 1px solid var(--line-soft);
+    }
+
+    .bar {
+      border-radius: 3px 3px 0 0;
+      background: #93b4d8;
+      min-height: 4px;
+    }
+
+    .bar.now {
+      background: var(--blue);
+    }
+
+    .steps {
+      padding: 12px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 22px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      border-bottom: 1px solid var(--line-soft);
+      font-size: 12px;
+    }
+
+    .step:last-child {
+      border-bottom: 0;
+    }
+
+    .dot {
+      display: grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: #e9f1fb;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .side-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid var(--line);
+      background: #fbfcfd;
+    }
+
+    .primary {
+      border-color: var(--green);
+      background: var(--green);
+      color: #fff;
+    }
+
+    @media (max-width: 1080px) {
+      .toolbar {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .kpis {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+      }
+
+      .main {
+        grid-template-columns: 1fr;
+      }
+
+      .sheet-scroll {
+        height: 520px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <strong>Cloud Cost Review</strong>
+        <span class="month-chip">Usage Apr 2026</span>
+      </div>
+      <div class="top-actions">
+        <span>Excel source: Usage Apr 2026</span>
+        <span>·</span>
+        <span>K열만 업데이트</span>
+      </div>
+    </header>
+
+    <section class="toolbar">
+      <div class="field">
+        <label>검수자</label>
+        <input class="input search" value="김승훈" aria-label="검수자 이름 검색">
+      </div>
+      <div class="field">
+        <label>Provider</label>
+        <div class="select">All</div>
+      </div>
+      <div class="field">
+        <label>상태</label>
+        <div class="select">미검수 우선</div>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><b>11</b><span>김승훈 담당 계정</span></div>
+        <div class="kpi"><b>7</b><span>미검수</span></div>
+        <div class="kpi"><b>12개월</b><span>비용 비교</span></div>
+        <div class="kpi"><b>W열</b><span>현재 검수 기준</span></div>
+      </div>
+      <button class="button">엑셀로 내보내기</button>
+    </section>
+
+    <section class="main">
+      <div class="sheet-wrap">
+        <div class="sheet-caption">
+          <strong>엑셀 유사 표 보기</strong>
+          <span class="caption-note">검수자는 본인 이름으로 검색하고, 계정별 1년 비용 흐름과 공유링크를 확인한 뒤 K열에 v를 체크합니다.</span>
+        </div>
+        <div class="sheet-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th class="freeze col-k">K<br>verified</th>
+                <th>Provider</th>
+                <th>Entity</th>
+                <th>Studio</th>
+                <th>Team</th>
+                <th>Project</th>
+                <th>Account</th>
+                <th>Owner</th>
+                <th>Cost Reviewer</th>
+                <th class="num">May 2025</th>
+                <th class="num">Jun 2025</th>
+                <th class="num">Jul 2025</th>
+                <th class="num">Aug 2025</th>
+                <th class="num">Sep 2025</th>
+                <th class="num">Oct 2025</th>
+                <th class="num">Nov 2025</th>
+                <th class="num">Dec 2025</th>
+                <th class="num">Jan 2026</th>
+                <th class="num">Feb 2026</th>
+                <th class="num">Mar 2026</th>
+                <th class="num current">Apr 2026<br>W열</th>
+                <th class="num">Diff</th>
+                <th class="num">Diff rate</th>
+                <th>공유링크</th>
+                <th>검수</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="freeze col-k"><span class="empty-check"></span></td>
+                <td>AWS</td>
+                <td>KRAFTON HQ</td>
+                <td>KRAFTON HQ</td>
+                <td>IT Dept.</td>
+                <td>OVERHEAD/OTHERS</td>
+                <td class="account">aws_bcp_prd@bluehole.net</td>
+                <td>김승훈</td>
+                <td class="reviewer">김승훈</td>
+                <td class="num">2,850,000</td>
+                <td class="num">2,850,000</td>
+                <td class="num">2,850,000</td>
+                <td class="num">2,850,000</td>
+                <td class="num">2,850,000</td>
+                <td class="num">2,850,000</td>
+                <td class="num">2,850,000</td>
+                <td class="num">2,850,000</td>
+                <td class="num">2,850,000</td>
+                <td class="num">2,850,000</td>
+                <td class="num">15,925,469</td>
+                <td class="num current">0</td>
+                <td class="num diff-down">-15,925,469</td>
+                <td class="num diff-down">-100%</td>
+                <td><button class="evidence-btn">링크 확인</button></td>
+                <td><button class="verify-btn">v 체크</button></td>
+              </tr>
+              <tr>
+                <td class="freeze col-k"><span class="v-check">v</span></td>
+                <td>AWS</td>
+                <td>KRAFTON HQ</td>
+                <td>KRAFTON HQ</td>
+                <td>IT Dept.</td>
+                <td>OVERHEAD/OTHERS</td>
+                <td class="account">aws_cloudtrail_dev@bluehole.net</td>
+                <td>염화음</td>
+                <td class="reviewer">김승훈</td>
+                <td class="num">6,736</td>
+                <td class="num">6,295</td>
+                <td class="num">18,686</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">22,440</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num current">0</td>
+                <td class="num">0</td>
+                <td class="num">0%</td>
+                <td><button class="evidence-btn">확인 완료</button></td>
+                <td><span class="flag">완료</span></td>
+              </tr>
+              <tr>
+                <td class="freeze col-k"><span class="empty-check"></span></td>
+                <td>AWS</td>
+                <td>KRAFTON HQ</td>
+                <td>KRAFTON HQ</td>
+                <td>IT Dept.</td>
+                <td>OVERHEAD/OTHERS</td>
+                <td class="account">aws_data-tech@krafton.com</td>
+                <td>염화음</td>
+                <td class="reviewer">김승훈</td>
+                <td class="num">4,143,800</td>
+                <td class="num">4,058,210</td>
+                <td class="num">4,221,900</td>
+                <td class="num">4,318,000</td>
+                <td class="num">4,114,500</td>
+                <td class="num">4,202,700</td>
+                <td class="num">4,188,300</td>
+                <td class="num">4,301,400</td>
+                <td class="num">4,412,920</td>
+                <td class="num">4,520,100</td>
+                <td class="num">4,690,400</td>
+                <td class="num current">5,233,810</td>
+                <td class="num diff-up">543,410</td>
+                <td class="num diff-up">+11.6%</td>
+                <td><button class="evidence-btn">링크 확인</button></td>
+                <td><button class="verify-btn">v 체크</button></td>
+              </tr>
+              <tr>
+                <td class="freeze col-k"><span class="empty-check"></span></td>
+                <td>Azure</td>
+                <td>KRAFTON HQ</td>
+                <td>KRAFTON HQ</td>
+                <td>IT Dept.</td>
+                <td>OVERHEAD/OTHERS</td>
+                <td class="account">Azure App Service SSL Certificates</td>
+                <td>유상규</td>
+                <td class="reviewer">김승훈</td>
+                <td class="num">191,794</td>
+                <td class="num">12,151,797</td>
+                <td class="num">1,647,138</td>
+                <td class="num">998,557</td>
+                <td class="num">687,485</td>
+                <td class="num">656,031</td>
+                <td class="num">372,478</td>
+                <td class="num">371,022</td>
+                <td class="num">241,926</td>
+                <td class="num">56,897</td>
+                <td class="num">49,010</td>
+                <td class="num current">53,208</td>
+                <td class="num diff-up">4,198</td>
+                <td class="num diff-up">+8.6%</td>
+                <td><button class="evidence-btn">링크 확인</button></td>
+                <td><button class="verify-btn">v 체크</button></td>
+              </tr>
+              <tr>
+                <td class="freeze col-k"><span class="empty-check"></span></td>
+                <td>GCP</td>
+                <td>KRAFTON HQ</td>
+                <td>KRAFTON HQ</td>
+                <td>IT Dept.</td>
+                <td>OVERHEAD/OTHERS</td>
+                <td class="account">dataplatform-api</td>
+                <td>백용원</td>
+                <td class="reviewer">김승훈</td>
+                <td class="num">1,840,010</td>
+                <td class="num">1,803,220</td>
+                <td class="num">1,790,305</td>
+                <td class="num">1,921,340</td>
+                <td class="num">1,870,222</td>
+                <td class="num">1,760,889</td>
+                <td class="num">1,742,001</td>
+                <td class="num">1,704,880</td>
+                <td class="num">1,650,010</td>
+                <td class="num">1,612,506</td>
+                <td class="num">1,582,300</td>
+                <td class="num current">1,455,400</td>
+                <td class="num diff-down">-126,900</td>
+                <td class="num diff-down">-8.0%</td>
+                <td><button class="evidence-btn">링크 확인</button></td>
+                <td><button class="verify-btn">v 체크</button></td>
+              </tr>
+              <tr>
+                <td class="freeze col-k"><span class="empty-check"></span></td>
+                <td>GWS</td>
+                <td>KRAFTON HQ</td>
+                <td>KRAFTON HQ</td>
+                <td>AI Transformation Team</td>
+                <td>OVERHEAD/OTHERS</td>
+                <td class="account">Gemini</td>
+                <td>김도균</td>
+                <td class="reviewer">김승훈</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">0</td>
+                <td class="num">220,100</td>
+                <td class="num">418,200</td>
+                <td class="num">651,800</td>
+                <td class="num">730,000</td>
+                <td class="num current">818,300</td>
+                <td class="num diff-up">88,300</td>
+                <td class="num diff-up">+12.1%</td>
+                <td><button class="evidence-btn">링크 확인</button></td>
+                <td><button class="verify-btn">v 체크</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="side-panel">
+        <div class="side-head">
+          <h2>선택 계정 상세</h2>
+          <p>표에서 행을 선택하면 12개월 추이, W열 현재 비용, 공유링크 확인 상태를 한 번에 봅니다.</p>
+        </div>
+        <div class="side-body">
+          <section class="card">
+            <div class="card-title">aws_bcp_prd@bluehole.net</div>
+            <div class="metric-grid">
+              <div class="metric"><span>검수자</span><b>김승훈</b></div>
+              <div class="metric"><span>K열 상태</span><b>미검수</b></div>
+              <div class="metric"><span>Mar 2026</span><b>15,925,469</b></div>
+              <div class="metric"><span>Apr 2026 W열</span><b>0</b></div>
+            </div>
+            <div class="spark">
+              <div class="bar" style="height:18%"></div>
+              <div class="bar" style="height:18%"></div>
+              <div class="bar" style="height:18%"></div>
+              <div class="bar" style="height:18%"></div>
+              <div class="bar" style="height:18%"></div>
+              <div class="bar" style="height:18%"></div>
+              <div class="bar" style="height:18%"></div>
+              <div class="bar" style="height:18%"></div>
+              <div class="bar" style="height:18%"></div>
+              <div class="bar" style="height:18%"></div>
+              <div class="bar" style="height:82%"></div>
+              <div class="bar now" style="height:4%"></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-title">검수 단계</div>
+            <div class="steps">
+              <div class="step"><span class="dot">1</span><span>공유링크 열기</span><button class="evidence-btn">열기</button></div>
+              <div class="step"><span class="dot">2</span><span>W열 금액과 증빙 금액 비교</span><span class="flag">대기</span></div>
+              <div class="step"><span class="dot">3</span><span>이상이 있으면 메모 남기기</span><span>선택</span></div>
+              <div class="step"><span class="dot">4</span><span>K열 verified에 v 반영</span><span>완료 전</span></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-title">운영자 확인 포인트</div>
+            <div class="steps">
+              <div class="step"><span class="dot">!</span><span>검수자 미지정 48건은 별도 필터</span><span></span></div>
+              <div class="step"><span class="dot">%</span><span>증감률 큰 계정 우선 정렬</span><span></span></div>
+              <div class="step"><span class="dot">↔</span><span>엑셀 원본으로 다시 내보내기</span><span></span></div>
+            </div>
+          </section>
+        </div>
+        <div class="side-actions">
+          <button class="button">메모 남기기</button>
+          <button class="button primary">K열에 v 체크</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

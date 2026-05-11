@@ -1,0 +1,62 @@
+import json
+import sys
+from http.server import BaseHTTPRequestHandler
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from lib.supabase_store import download_workbook_bytes, get_active_workbook, supabase_is_configured
+from scripts.review_server import (
+    DATA_PATH,
+    build_reviewed_workbook,
+    build_reviewed_workbook_from_bytes,
+    safe_filename,
+    uploader_is_allowed,
+)
+
+
+class handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        payload = self.read_json()
+        if not uploader_is_allowed(payload.get("uploader")):
+            self.send_error(403, "This uploader is not allowed to export reviewed Excel files")
+            return
+
+        try:
+            if supabase_is_configured():
+                workbook = get_active_workbook()
+                if not workbook:
+                    raise ValueError("No active workbook has been uploaded")
+                original_bytes = download_workbook_bytes(workbook["storage_path"])
+                body = build_reviewed_workbook_from_bytes(
+                    original_bytes,
+                    workbook["sheet_name"],
+                    payload.get("rows", []),
+                )
+                filename = f"{safe_filename(Path(workbook['filename']).stem)}_reviewed.xlsx"
+            else:
+                body = build_reviewed_workbook(DATA_PATH, payload.get("rows", []))
+                data = json.loads(DATA_PATH.read_text(encoding="utf-8"))
+                filename = f"{safe_filename(Path(data.get('sourceWorkbook', 'cloud-cost.xlsx')).stem)}_reviewed.xlsx"
+        except Exception as exc:
+            self.send_error(400, f"Reviewed workbook export failed: {exc}")
+            return
+
+        self.send_response(200)
+        self.send_header(
+            "Content-Type",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def read_json(self):
+        length = int(self.headers.get("Content-Length", "0") or 0)
+        if length == 0:
+            return {}
+        return json.loads(self.rfile.read(length).decode("utf-8"))

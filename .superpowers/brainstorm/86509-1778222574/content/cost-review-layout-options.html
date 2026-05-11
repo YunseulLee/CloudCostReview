@@ -1,0 +1,662 @@
+<style>
+  :root {
+    --ink: #17212b;
+    --muted: #66737f;
+    --line: #d8e0e7;
+    --soft: #f5f7f9;
+    --blue: #1f6feb;
+    --green: #16885a;
+    --gold: #f5c84c;
+    --red: #c24137;
+  }
+
+  .cost-review-wrap {
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+
+  .screen-title {
+    margin: 0 0 8px;
+    color: var(--ink);
+    font-size: 28px;
+    letter-spacing: 0;
+  }
+
+  .screen-note {
+    max-width: 920px;
+    margin: 0 0 22px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .layout-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .layout-option {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color .16s, box-shadow .16s, transform .16s;
+  }
+
+  .layout-option:hover {
+    border-color: #9cb2c6;
+    box-shadow: 0 10px 24px rgba(23, 33, 43, .08);
+    transform: translateY(-1px);
+  }
+
+  .layout-option.selected {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(31, 111, 235, .16);
+  }
+
+  .option-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    background: #fbfcfd;
+  }
+
+  .option-head h3 {
+    margin: 0;
+    color: var(--ink);
+    font-size: 16px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: #e9f2ff;
+    color: #1858b8;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .mini-app {
+    height: 455px;
+    background: var(--soft);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .app-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 12px;
+    background: #1d2935;
+    color: #fff;
+  }
+
+  .brand {
+    font-weight: 800;
+    font-size: 13px;
+  }
+
+  .pill-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .pill {
+    padding: 4px 7px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.13);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .queue-body {
+    display: grid;
+    grid-template-columns: 38% 62%;
+    height: calc(100% - 48px);
+  }
+
+  .left-pane,
+  .right-pane,
+  .wide-pane {
+    min-width: 0;
+    background: #fff;
+  }
+
+  .left-pane {
+    border-right: 1px solid var(--line);
+  }
+
+  .pane-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px;
+    border-bottom: 1px solid var(--line);
+    background: #fff;
+  }
+
+  .search {
+    flex: 1;
+    min-width: 0;
+    height: 28px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--soft);
+  }
+
+  .small-btn {
+    min-width: 30px;
+    height: 28px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .row-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    padding: 10px;
+    border-bottom: 1px solid #edf1f4;
+  }
+
+  .row-item.active {
+    background: #f1f7ff;
+    border-left: 3px solid var(--blue);
+    padding-left: 7px;
+  }
+
+  .row-main {
+    min-width: 0;
+  }
+
+  .row-main strong,
+  .detail-title strong,
+  .table-cell strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink);
+    font-size: 13px;
+  }
+
+  .row-main span,
+  .detail-title span,
+  .table-cell span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .amount {
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 800;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .diff.down {
+    color: var(--red);
+  }
+
+  .diff.up {
+    color: var(--green);
+  }
+
+  .detail {
+    padding: 14px;
+  }
+
+  .detail-title {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .status-open,
+  .status-done {
+    padding: 5px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .status-open {
+    background: #fff4d6;
+    color: #8a5d00;
+  }
+
+  .status-done {
+    background: #ddf6ea;
+    color: #0d7048;
+  }
+
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .metric {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px;
+    background: #fff;
+  }
+
+  .metric label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  .metric b {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink);
+    font-size: 13px;
+  }
+
+  .link-panel {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .link-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--line);
+    background: #fbfcfd;
+  }
+
+  .link-head b {
+    font-size: 12px;
+  }
+
+  .evidence {
+    padding: 12px 10px;
+  }
+
+  .evidence-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 32px;
+    border-bottom: 1px solid #edf1f4;
+    font-size: 12px;
+  }
+
+  .evidence-row:last-child {
+    border-bottom: 0;
+  }
+
+  .approve-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .memo {
+    height: 36px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+  }
+
+  .approve {
+    height: 36px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 6px;
+    background: var(--green);
+    color: #fff;
+    font-weight: 800;
+  }
+
+  .option-copy {
+    padding: 14px 16px 16px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .table-app {
+    display: grid;
+    grid-template-rows: 48px 64px 1fr;
+    height: 100%;
+  }
+
+  .summary-band {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .summary-kpi {
+    border-left: 3px solid var(--blue);
+    padding-left: 8px;
+  }
+
+  .summary-kpi b {
+    display: block;
+    color: var(--ink);
+    font-size: 15px;
+  }
+
+  .summary-kpi span {
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  .review-table {
+    padding: 8px;
+    background: #fff;
+  }
+
+  .table-row {
+    display: grid;
+    grid-template-columns: 56px 1.2fr 1fr .9fr .9fr 62px;
+    align-items: center;
+    gap: 8px;
+    min-height: 43px;
+    border-bottom: 1px solid #edf1f4;
+  }
+
+  .table-head {
+    min-height: 30px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .check-mini {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--green);
+    font-weight: 900;
+  }
+
+  .batch-app {
+    display: grid;
+    grid-template-rows: 48px 1fr;
+    height: 100%;
+  }
+
+  .batch-body {
+    display: grid;
+    grid-template-columns: 30% 70%;
+    min-height: 0;
+  }
+
+  .reviewer-list {
+    background: #fff;
+    border-right: 1px solid var(--line);
+    padding: 10px;
+  }
+
+  .reviewer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid #edf1f4;
+    font-size: 12px;
+  }
+
+  .batch-main {
+    padding: 12px;
+    background: #fff;
+  }
+
+  .batch-card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+
+  .batch-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 10px;
+    background: #fbfcfd;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .batch-card-body {
+    display: grid;
+    grid-template-columns: 1fr 94px;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .bar {
+    height: 8px;
+    border-radius: 999px;
+    background: #e8edf2;
+    overflow: hidden;
+  }
+
+  .bar span {
+    display: block;
+    height: 100%;
+    background: var(--green);
+  }
+
+  .risk {
+    color: var(--red);
+    font-weight: 800;
+  }
+
+  @media (max-width: 980px) {
+    .layout-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="cost-review-wrap">
+  <h2 class="screen-title">클라우드 비용 검수 웹 목업</h2>
+  <p class="screen-note">현재 엑셀의 핵심 흐름은 “W열 현재 비용 확인 → 공유링크 증빙 확인 → K열 verified에 v 표시”입니다. 아래 세 가지는 같은 데이터를 다르게 보여주는 방향입니다. 카드를 클릭해서 마음에 드는 방향을 선택할 수 있어요.</p>
+
+  <div class="layout-grid">
+    <section class="layout-option" data-choice="a-queue-detail" onclick="toggleSelect(this)">
+      <div class="option-head">
+        <h3>A. 큐 + 상세 검수</h3>
+        <span class="badge">추천</span>
+      </div>
+      <div class="mini-app">
+        <div class="app-topbar">
+          <div class="brand">Cloud Cost Review</div>
+          <div class="pill-row">
+            <span class="pill">Open 359</span>
+            <span class="pill">Verified 226</span>
+          </div>
+        </div>
+        <div class="queue-body">
+          <div class="left-pane">
+            <div class="pane-toolbar">
+              <div class="search"></div>
+              <button class="small-btn">필터</button>
+            </div>
+            <div class="row-item active">
+              <div class="row-main"><strong>aws_bcp_prd</strong><span>AWS · IT Dept. · 김승훈</span></div>
+              <div class="amount">0 KRW<br><span class="diff down">-15.9M</span></div>
+            </div>
+            <div class="row-item">
+              <div class="row-main"><strong>Azure App Service SSL</strong><span>Azure · IT Dept. · 유상규</span></div>
+              <div class="amount">2.4M<br><span class="diff up">+4%</span></div>
+            </div>
+            <div class="row-item">
+              <div class="row-main"><strong>dataplatform-api</strong><span>GCP · IT Dept. · 백용원</span></div>
+              <div class="amount">1.1M<br><span class="diff down">-8%</span></div>
+            </div>
+            <div class="row-item">
+              <div class="row-main"><strong>Gemini</strong><span>GWS · AI Transformation · 김도균</span></div>
+              <div class="amount">730K<br><span class="diff up">+12%</span></div>
+            </div>
+          </div>
+          <div class="right-pane">
+            <div class="detail">
+              <div class="detail-title">
+                <div><strong>aws_bcp_prd@bluehole.net</strong><span>Row 22 · K열은 아직 비어 있음</span></div>
+                <span class="status-open">검수 필요</span>
+              </div>
+              <div class="metric-grid">
+                <div class="metric"><label>V열 Mar 2026</label><b>15,925,469 KRW</b></div>
+                <div class="metric"><label>W열 Apr 2026</label><b>0 KRW</b></div>
+                <div class="metric"><label>증감</label><b class="diff down">-100%</b></div>
+              </div>
+              <div class="link-panel">
+                <div class="link-head"><b>공유링크 확인</b><button class="small-btn">열기</button></div>
+                <div class="evidence">
+                  <div class="evidence-row"><span>Invoice / 상세 비용 링크</span><span>대기</span></div>
+                  <div class="evidence-row"><span>금액 일치 여부</span><span>확인 전</span></div>
+                  <div class="evidence-row"><span>검수 메모</span><span>선택 입력</span></div>
+                </div>
+              </div>
+              <div class="approve-row">
+                <div class="memo"></div>
+                <button class="approve">K열에 v 체크</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="option-copy">검수자가 한 행씩 집중해서 처리합니다. 공유링크 확인과 완료 체크가 같은 화면에 있어 실수 가능성이 낮고, 기존 엑셀 흐름과 가장 가깝습니다.</p>
+    </section>
+
+    <section class="layout-option" data-choice="b-table-first" onclick="toggleSelect(this)">
+      <div class="option-head">
+        <h3>B. 테이블 중심 대시보드</h3>
+        <span class="badge">빠른 스캔</span>
+      </div>
+      <div class="mini-app">
+        <div class="table-app">
+          <div class="app-topbar">
+            <div class="brand">Usage Apr 2026</div>
+            <div class="pill-row">
+              <span class="pill">Provider</span>
+              <span class="pill">Reviewer</span>
+              <span class="pill">Diff rate</span>
+            </div>
+          </div>
+          <div class="summary-band">
+            <div class="summary-kpi"><b>585</b><span>전체 행</span></div>
+            <div class="summary-kpi"><b>359</b><span>미검수</span></div>
+            <div class="summary-kpi"><b>48</b><span>담당자 없음</span></div>
+            <div class="summary-kpi"><b>26</b><span>최대 담당자 큐</span></div>
+          </div>
+          <div class="review-table">
+            <div class="table-row table-head">
+              <div>상태</div><div>Account</div><div>Reviewer</div><div>W열</div><div>Diff</div><div>K</div>
+            </div>
+            <div class="table-row">
+              <div class="status-open">Open</div><div class="table-cell"><strong>aws_adx_001</strong><span>AWS · Neptune</span></div><div>미지정</div><div>0</div><div class="risk">-100%</div><div class="check-mini"></div>
+            </div>
+            <div class="table-row">
+              <div class="status-done">Done</div><div class="table-cell"><strong>GCP Support Fee</strong><span>GCP · IT Dept.</span></div><div>Deleted</div><div>1.9M</div><div>+2%</div><div class="check-mini">v</div>
+            </div>
+            <div class="table-row">
+              <div class="status-open">Open</div><div class="table-cell"><strong>Gemini</strong><span>GWS · AI Transformation</span></div><div>김도균</div><div>730K</div><div>+12%</div><div class="check-mini"></div>
+            </div>
+            <div class="table-row">
+              <div class="status-open">Open</div><div class="table-cell"><strong>AzureOpsLAB</strong><span>Azure · Service DevOps</span></div><div>엄기성</div><div>4.2M</div><div>-3%</div><div class="check-mini"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="option-copy">엑셀과 가장 비슷하게 전체 목록을 한 번에 봅니다. 관리자에게는 좋지만, 공유링크 확인과 체크 동작이 행 안에 압축되어 검수자 입장에서는 화면이 다소 바쁠 수 있습니다.</p>
+    </section>
+
+    <section class="layout-option" data-choice="c-reviewer-batch" onclick="toggleSelect(this)">
+      <div class="option-head">
+        <h3>C. 담당자별 배치 검수</h3>
+        <span class="badge">운영 관리</span>
+      </div>
+      <div class="mini-app">
+        <div class="batch-app">
+          <div class="app-topbar">
+            <div class="brand">Reviewer Workspace</div>
+            <div class="pill-row">
+              <span class="pill">내 담당</span>
+              <span class="pill">마감 임박</span>
+            </div>
+          </div>
+          <div class="batch-body">
+            <div class="reviewer-list">
+              <div class="reviewer"><strong>최준석</strong><span>26</span></div>
+              <div class="reviewer"><strong>엄기성</strong><span>26</span></div>
+              <div class="reviewer"><strong>김시훈</strong><span>25</span></div>
+              <div class="reviewer"><strong>Jordan</strong><span>21</span></div>
+              <div class="reviewer"><strong>김정언</strong><span>18</span></div>
+            </div>
+            <div class="batch-main">
+              <div class="batch-card">
+                <div class="batch-card-head"><b>최준석 · AWS/Tencent</b><span>11/26 완료</span></div>
+                <div class="batch-card-body">
+                  <div><div class="bar"><span style="width:42%"></span></div><span class="table-cell"><span>큰 증감 행 4건 먼저 검수</span></span></div>
+                  <button class="small-btn">시작</button>
+                </div>
+              </div>
+              <div class="batch-card">
+                <div class="batch-card-head"><b>엄기성 · Azure/GCP</b><span>18/26 완료</span></div>
+                <div class="batch-card-body">
+                  <div><div class="bar"><span style="width:69%"></span></div><span class="table-cell"><span>미확인 링크 3건</span></span></div>
+                  <button class="small-btn">시작</button>
+                </div>
+              </div>
+              <div class="batch-card">
+                <div class="batch-card-head"><b>담당자 없음</b><span class="risk">48건</span></div>
+                <div class="batch-card-body">
+                  <div><div class="bar"><span style="width:12%"></span></div><span class="table-cell"><span>운영자가 배정 필요</span></span></div>
+                  <button class="small-btn">배정</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="option-copy">운영자가 담당자별 진행률과 병목을 보기 좋습니다. 실제 행 검수 화면은 별도로 들어가야 해서, 첫 버전보다는 후속 관리 기능에 어울립니다.</p>
+    </section>
+  </div>
+</div>

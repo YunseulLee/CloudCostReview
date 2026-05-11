@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Cost Review</title>
+  <link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <strong>Cloud Cost Review</strong>
+        <span id="sheet-name" class="chip">Usage Apr 2026</span>
+      </div>
+      <div class="top-meta">
+        <span data-i18n="topMetaW">W열 현재 비용</span>
+        <span>·</span>
+        <span data-i18n="topMeta12">12개월 비교</span>
+      </div>
+    </header>
+
+    <section class="toolbar" aria-label="검수 필터">
+      <label class="control language-control">
+        <span data-i18n="language">Language</span>
+        <select id="language-select">
+          <option value="ko">한국어</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+
+      <label class="control reviewer-control">
+        <span data-i18n="reviewerSearch">검수자 검색</span>
+        <input id="reviewer-search" type="search" placeholder="이윤슬" autocomplete="off">
+      </label>
+
+      <label class="control provider-control">
+        <span data-i18n="provider">Provider</span>
+        <select id="provider-filter">
+          <option value="all">All</option>
+        </select>
+      </label>
+
+      <label class="control status-control">
+        <span data-i18n="status">상태</span>
+        <select id="status-filter">
+          <option value="open" data-i18n="statusOpen">미검수 우선</option>
+          <option value="all" data-i18n="statusAll">전체</option>
+          <option value="verified" data-i18n="statusVerified">검수 완료</option>
+        </select>
+      </label>
+
+      <label class="toggle-control">
+        <input id="recent-months-only" type="checkbox">
+        <span data-i18n="recentOnly">최근 3개월만 보기</span>
+      </label>
+
+      <label class="upload-control">
+        <input id="workbook-upload" type="file" accept=".xlsx">
+        <span data-i18n="uploadWorkbook">월별 엑셀 업로드</span>
+      </label>
+
+      <label class="control uploader-control">
+        <span data-i18n="uploadOperator">업로드 담당자</span>
+        <input id="uploader-name" type="text" autocomplete="off">
+      </label>
+
+      <span id="upload-permission-status" class="permission-status"></span>
+
+      <div id="kpi-strip" class="kpi-strip" aria-live="polite"></div>
+
+      <button id="clear-local" class="secondary-button" type="button" data-i18n="clearChecks">화면 체크 초기화</button>
+
+      <button id="download-reviewed" class="secondary-button" type="button" data-i18n="downloadReviewed">K열 반영 엑셀 다운로드</button>
+    </section>
+
+    <section class="workspace">
+      <section class="sheet-panel" aria-label="비용 검수 표">
+        <div class="panel-title">
+        <strong data-i18n="tableTitle">엑셀 유사 표 보기</strong>
+          <span id="result-summary" data-i18n="loadingData">데이터를 불러오는 중입니다.</span>
+        </div>
+        <div class="sheet-scroll">
+          <table id="review-table">
+            <thead id="table-head"></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="detail-panel" aria-label="선택 계정 상세">
+        <div class="detail-head">
+          <h1 id="detail-account" data-i18n="selectAccount">계정을 선택하세요</h1>
+          <p id="detail-subtitle" data-i18n="selectAccountHelp">표에서 행을 선택하면 월별 비용과 검수 작업이 표시됩니다.</p>
+        </div>
+        <div id="detail-body" class="detail-body"></div>
+        <div class="detail-actions">
+          <button id="open-evidence" class="secondary-button" type="button" disabled data-i18n="openEvidence">상세내역 열기</button>
+          <button id="verify-selected" class="primary-button" type="button" disabled data-i18n="verifySelected">체크</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
