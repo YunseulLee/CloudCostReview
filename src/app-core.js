@@ -23,6 +23,8 @@ const UI_TEXT = {
   uploadAllowed: { ko: '업로드/초기화/다운로드 가능', en: 'Upload/reset/download allowed' },
   downloadReviewed: { ko: 'K열 반영 엑셀 다운로드', en: 'Download Excel with K updated' },
   clearChecks: { ko: '화면 체크 초기화', en: 'Reset screen checks' },
+  clearMemos: { ko: '메모 전체 삭제', en: 'Delete all memos' },
+  clearMemosComplete: { ko: '모든 검수 메모를 삭제했습니다.', en: 'All review memos have been deleted.' },
   currentShown: { ko: '현재 표시', en: 'Shown' },
   open: { ko: '미검수', en: 'Open' },
   verifiedDone: { ko: '검수 완료', en: 'Verified' },

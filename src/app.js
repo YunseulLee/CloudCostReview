@@ -51,6 +51,7 @@ const els = {
   uploadPermissionStatus: document.querySelector('#upload-permission-status'),
   kpiStrip: document.querySelector('#kpi-strip'),
   clearLocal: document.querySelector('#clear-local'),
+  clearMemos: document.querySelector('#clear-memos'),
   downloadReviewed: document.querySelector('#download-reviewed'),
   resultSummary: document.querySelector('#result-summary'),
   reviewTable: document.querySelector('#review-table'),
@@ -118,6 +119,7 @@ function updateUploadPermission() {
   const allowed = canManageProtectedActions(state.uploaderName);
   els.workbookUpload.disabled = !allowed;
   els.clearLocal.disabled = !allowed;
+  els.clearMemos.disabled = !allowed;
   els.downloadReviewed.disabled = !allowed;
   els.workbookUpload.closest('.upload-control')?.classList.toggle('disabled', !allowed);
   els.uploadPermissionStatus.textContent = allowed ? t('uploadAllowed') : t('uploadLocked');
@@ -687,6 +689,17 @@ els.clearLocal.addEventListener('click', () => {
   saveLocalState();
   render();
   els.resultSummary.textContent = t('resetComplete');
+});
+els.clearMemos.addEventListener('click', () => {
+  if (!canManageProtectedActions(state.uploaderName)) {
+    els.resultSummary.textContent = t('uploadLocked');
+    return;
+  }
+  state.memos = {};
+  saveLocalState();
+  scheduleRemoteStateSave();
+  render();
+  els.resultSummary.textContent = t('clearMemosComplete');
 });
 els.downloadReviewed.addEventListener('click', async () => {
   try {
