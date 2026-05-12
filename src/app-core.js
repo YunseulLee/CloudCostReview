@@ -4,14 +4,15 @@ export function normalizeText(value) {
 
 const UI_TEXT = {
   reviewerSearch: { ko: '검수자 검색', en: 'Reviewer' },
-  reviewerPlaceholder: { ko: '이윤슬', en: 'Yunseul Lee' },
+  reviewerPlaceholder: { ko: '예 : 이윤슬', en: 'e.g. Yunseul Lee' },
   provider: { ko: 'Provider', en: 'Provider' },
   allProviders: { ko: 'All', en: 'All' },
   status: { ko: '상태', en: 'Status' },
   statusOpen: { ko: '미검수 우선', en: 'Open first' },
   statusAll: { ko: '전체', en: 'All' },
   statusVerified: { ko: '검수 완료', en: 'Verified' },
-  recentOnly: { ko: '최근 3개월만 보기', en: 'Show recent 3 months' },
+  recentOnly: { ko: '12개월값 보기', en: 'Show 12 months' },
+  showOwner: { ko: 'Owner 보기', en: 'Show Owner' },
   uploadWorkbook: { ko: '월별 엑셀 업로드', en: 'Upload monthly Excel' },
   uploadOperator: { ko: '업로드 담당자', en: 'Uploader' },
   uploadOperatorPlaceholder: { ko: '', en: '' },
@@ -29,7 +30,7 @@ const UI_TEXT = {
   tableTitle: { ko: '엑셀 유사 표 보기', en: 'Excel-like Table' },
   loadingData: { ko: '데이터를 불러오는 중입니다.', en: 'Loading data.' },
   noRows: { ko: '조건에 맞는 계정이 없습니다.', en: 'No accounts match the filters.' },
-  evidenceLink: { ko: '상세내역 링크', en: 'Detail link' },
+  evidenceLink: { ko: 'Link', en: 'Link' },
   review: { ko: '검수', en: 'Review' },
   entity: { ko: 'Entity', en: 'Entity' },
   studio: { ko: 'Studio', en: 'Studio' },
@@ -39,10 +40,10 @@ const UI_TEXT = {
   costReviewer: { ko: '검수자', en: 'Cost Reviewer' },
   diff: { ko: 'Diff', en: 'Diff' },
   diffRate: { ko: 'Diff rate', en: 'Diff rate' },
-  accountLink: { ko: '계정 링크', en: 'Account link' },
-  providerLink: { ko: 'Provider 링크', en: 'Provider link' },
+  accountLink: { ko: 'Link', en: 'Link' },
+  providerLink: { ko: 'Link', en: 'Link' },
   linkInput: { ko: '링크 입력', en: 'Add link' },
-  verifyButton: { ko: '체크', en: 'Check' },
+  verifyButton: { ko: 'Check', en: 'Check' },
   selectAccount: { ko: '계정을 선택하세요', en: 'Select an account' },
   selectAccountHelp: {
     ko: '표에서 행을 선택하면 월별 비용과 검수 작업이 표시됩니다.',
@@ -53,7 +54,7 @@ const UI_TEXT = {
     en: 'Select an account to review, or search by reviewer name.',
   },
   openEvidence: { ko: '상세내역 열기', en: 'Open detail link' },
-  verifySelected: { ko: '체크', en: 'Check' },
+  verifySelected: { ko: 'Check', en: 'Check' },
   alreadyVerified: { ko: '이미 체크됨', en: 'Already checked' },
   accountInfo: { ko: '계정 정보', en: 'Account Info' },
   reviewer: { ko: '검수자', en: 'Reviewer' },
@@ -71,7 +72,7 @@ const UI_TEXT = {
     ko: '계정들은 계정별 링크가 비어 있으면 이 링크를 사용합니다.',
     en: 'accounts use this link when account-specific link is blank.',
   },
-  accountOverrideLink: { ko: '별도 상세내역 링크', en: 'Separate Detail Link' },
+  accountOverrideLink: { ko: '상세내역 폴더링크', en: 'Detail Folder Link' },
   accountOverridePlaceholder: {
     ko: '이 계정만 다른 상세내역 링크를 쓰는 경우 입력',
     en: 'Enter only when this account uses a separate detail link',
@@ -83,7 +84,7 @@ const UI_TEXT = {
   memoOverviewCount: { ko: '개 메모', en: 'memos' },
   noReviewMemos: { ko: '저장된 검수 메모가 없습니다.', en: 'No review memos saved.' },
   memoPlaceholder: {
-    ko: '금액이 다르거나 확인이 필요한 내용을 적어두세요.',
+    ko: '비용 증감 사유를 작성해주세요.',
     en: 'Add notes for mismatched amounts or follow-up items.',
   },
   rowsShown: { ko: '개 계정 표시 중', en: 'accounts shown' },
@@ -103,6 +104,7 @@ const UI_TEXT = {
   language: { ko: 'Language', en: 'Language' },
 };
 
+// Sync this list with ALLOWED_UPLOADERS env var on server
 const ALLOWED_UPLOADERS = ['이윤슬', 'yunseul', 'yunseul lee'];
 
 export function uiText(key, language = 'ko') {
@@ -199,6 +201,30 @@ export function formatCurrency(value) {
   return Math.round(number).toLocaleString('en-US');
 }
 
+export function formatKrw(value) {
+  const formatted = formatCurrency(value);
+  return formatted === '-' ? '-' : `${formatted}원`;
+}
+
+export function shortMonthLabel(header) {
+  const value = String(header || '').replace('(KRW)', '').replace(/\s+/g, ' ').trim();
+  return value.split(' ')[0] || '-';
+}
+
+export function buildMonthChartItems(months = []) {
+  const maxValue = Math.max(1, ...months.map((month) => Math.max(0, Number(month.value) || 0)));
+
+  return months.map((month) => {
+    const value = Math.max(0, Number(month.value) || 0);
+    return {
+      ...month,
+      height: Math.max(4, Math.round((value / maxValue) * 76)),
+      valueLabel: formatKrw(month.value),
+      shortLabel: shortMonthLabel(month.header),
+    };
+  });
+}
+
 export function formatRate(value) {
   if (value === null || value === undefined || value === '') {
     return '-';
@@ -218,8 +244,8 @@ export function getUniqueProviders(rows) {
   );
 }
 
-export function getVisibleMonths(months, recentOnly = false) {
-  if (!recentOnly) {
+export function getVisibleMonths(months, showAllMonths = false) {
+  if (showAllMonths) {
     return [...months];
   }
 
@@ -231,9 +257,23 @@ export function getEffectiveEvidenceUrl(row, accountLinks = {}, providerLinks = 
   const providerLink = normalizeText(providerLinks[row.provider])
     ? providerLinks[row.provider].trim()
     : '';
+  const providerFolderLink = normalizeText(providerLinks[`folder::${row.provider}`])
+    ? providerLinks[`folder::${row.provider}`].trim()
+    : '';
   const sourceLink = normalizeText(row.evidenceUrl) ? row.evidenceUrl.trim() : '';
 
-  return accountLink || providerLink || sourceLink;
+  return accountLink || providerLink || providerFolderLink || sourceLink;
+}
+
+export function normalizeExternalUrl(url) {
+  const value = String(url || '').trim();
+  if (!value) {
+    return '';
+  }
+  if (/^[a-z][a-z\d+.-]*:/i.test(value)) {
+    return value;
+  }
+  return `https://${value}`;
 }
 
 export function buildReviewExportRows(rows) {

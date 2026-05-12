@@ -1,5 +1,6 @@
 import cgi
 import json
+import os
 import sys
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
@@ -38,6 +39,8 @@ class handler(BaseHTTPRequestHandler):
         try:
             if supabase_is_configured():
                 result = upload_workbook(file_item.filename, workbook_bytes, uploader_name)
+            elif os.environ.get("VERCEL"):
+                raise RuntimeError("Supabase environment variables are required for Vercel uploads")
             else:
                 result = process_uploaded_workbook(workbook_bytes, file_item.filename, uploader_name)
         except Exception as exc:

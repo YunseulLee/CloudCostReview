@@ -17,8 +17,11 @@ class handler(BaseHTTPRequestHandler):
         if supabase_is_configured():
             payload = get_current_payload()
         if payload is None:
-            payload = json.loads(DATA_PATH.read_text(encoding="utf-8"))
-            payload["workbookId"] = "local"
+            if DATA_PATH.exists():
+                payload = json.loads(DATA_PATH.read_text(encoding="utf-8"))
+                payload["workbookId"] = "local"
+            else:
+                payload = {"rows": [], "workbooks": [], "review_states": {}, "provider_links": {}, "workbookId": "local"}
         self.send_json(payload)
 
     def send_json(self, payload, status=200):

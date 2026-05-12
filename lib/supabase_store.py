@@ -4,7 +4,7 @@ import tempfile
 import time
 from pathlib import Path
 from urllib.error import HTTPError
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
 
 from scripts.extract_cost_data import extract_workbook_payload
@@ -22,8 +22,32 @@ def supabase_is_configured(env=os.environ):
     return bool(env.get("SUPABASE_URL") and env.get("SUPABASE_SERVICE_ROLE_KEY"))
 
 
+def key_type(key):
+    value = str(key or "")
+    if not value:
+        return "missing"
+    if value.startswith("sb_secret_"):
+        return "sb-secret-key"
+    if value.startswith("sb_publishable_"):
+        return "sb-publishable-key"
+    if value.startswith("eyJ"):
+        return "legacy-jwt-key"
+    return "unknown-key"
+
+
+def normalize_supabase_url(url):
+    normalized = (url or "").strip().rstrip("/")
+    parsed = urlparse(normalized)
+    if parsed.scheme and parsed.netloc:
+        return f"{parsed.scheme}://{parsed.netloc}"
+    for suffix in ("/rest/v1", "/storage/v1", "/auth/v1", "/functions/v1"):
+        if normalized.endswith(suffix):
+            return normalized[: -len(suffix)]
+    return normalized
+
+
 def current_config(env=os.environ):
-    url = (env.get("SUPABASE_URL") or "").rstrip("/")
+    url = normalize_supabase_url(env.get("SUPABASE_URL"))
     key = env.get("SUPABASE_SERVICE_ROLE_KEY") or ""
     bucket = env.get("SUPABASE_STORAGE_BUCKET") or DEFAULT_BUCKET
     if not url or not key:
@@ -34,8 +58,9 @@ def current_config(env=os.environ):
 def auth_headers(config, content_type="application/json"):
     headers = {
         "apikey": config["key"],
-        "Authorization": f"Bearer {config['key']}",
     }
+    if not str(config["key"]).startswith("sb_"):
+        headers["Authorization"] = f"Bearer {config['key']}"
     if content_type:
         headers["Content-Type"] = content_type
     return headers
@@ -55,7 +80,7 @@ def request_json(method, path, body=None, query=None, prefer=None):
         with urlopen(request, timeout=30) as response:
             raw = response.read()
     except HTTPError as exc:
-        raise SupabaseError(read_http_error(exc)) from exc
+        raise SupabaseError(f"{method} /rest/v1/{path} failed: {read_http_error(exc)}") from exc
     if not raw:
         return None
     return json.loads(raw.decode("utf-8"))
@@ -73,7 +98,10 @@ def request_storage(method, object_path, body=None, content_type=None, upsert=Fa
         with urlopen(request, timeout=60) as response:
             return response.read()
     except HTTPError as exc:
-        raise SupabaseError(read_http_error(exc)) from exc
+        raise SupabaseError(
+            f"{method} /storage/v1/object/{config['bucket']}/{object_path} "
+            f"failed with {key_type(config['key'])}: {read_http_error(exc)}"
+        ) from exc
 
 
 def read_http_error(exc):
@@ -175,10 +203,6 @@ def get_review_state(workbook_id):
 
 
 def save_review_state(workbook_id, rows, provider_links):
-    encoded_id = quote(str(workbook_id), safe="")
-    request_json("DELETE", "review_states", query=f"workbook_id=eq.{encoded_id}")
-    request_json("DELETE", "provider_links", query=f"workbook_id=eq.{encoded_id}")
-
     review_rows = [
         {
             "workbook_id": workbook_id,
@@ -192,7 +216,7 @@ def save_review_state(workbook_id, rows, provider_links):
         if row.get("rowId")
     ]
     if review_rows:
-        request_json("POST", "review_states", review_rows, prefer="return=minimal")
+        request_json("POST", "review_states", review_rows, prefer="resolution=merge-duplicates,return=minimal")
 
     provider_rows = [
         {"workbook_id": workbook_id, "provider": provider, "url": url}
@@ -200,6 +224,6 @@ def save_review_state(workbook_id, rows, provider_links):
         if provider and url
     ]
     if provider_rows:
-        request_json("POST", "provider_links", provider_rows, prefer="return=minimal")
+        request_json("POST", "provider_links", provider_rows, prefer="resolution=merge-duplicates,return=minimal")
 
     return {"ok": True}

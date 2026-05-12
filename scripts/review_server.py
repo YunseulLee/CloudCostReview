@@ -2,6 +2,7 @@ import cgi
 import io
 import json
 import mimetypes
+import os
 import re
 import sys
 import unicodedata
@@ -19,7 +20,8 @@ from scripts.extract_cost_data import extract_workbook_payload, resolve_sheet_pa
 
 UPLOADS_DIR = ROOT_DIR / "uploads"
 DATA_PATH = ROOT_DIR / "data" / "cost-accounts.json"
-ALLOWED_UPLOADERS = {"이윤슬", "yunseul", "yunseul lee"}
+_env_uploaders = os.environ.get("ALLOWED_UPLOADERS", "")
+ALLOWED_UPLOADERS = {n.strip().lower() for n in _env_uploaders.split(",") if n.strip()} or {"이윤슬", "yunseul", "yunseul lee"}
 VERIFIED_COLUMN = "K"
 
 

@@ -1,5 +1,6 @@
 import {
   applyVerificationOverrides,
+  buildMonthChartItems,
   buildReviewExportRows,
   buildReviewStatePayload,
   canManageProtectedActions,
@@ -10,6 +11,7 @@ import {
   getRowsWithMemos,
   getUniqueProviders,
   getVisibleMonths,
+  normalizeExternalUrl,
   rowIsLocallyVerified,
   rowIsVerified,
   summarizeRows,
@@ -17,6 +19,7 @@ import {
 } from './app-core.js';
 
 const STORAGE_KEY = 'cloud-cost-review-state-v1';
+const FOLDER_LINK_PREFIX = 'folder::';
 
 const state = {
   data: null,
@@ -42,6 +45,7 @@ const els = {
   providerFilter: document.querySelector('#provider-filter'),
   statusFilter: document.querySelector('#status-filter'),
   recentMonthsOnly: document.querySelector('#recent-months-only'),
+  showOwnerColumn: document.querySelector('#show-owner-column'),
   workbookUpload: document.querySelector('#workbook-upload'),
   uploaderName: document.querySelector('#uploader-name'),
   uploadPermissionStatus: document.querySelector('#upload-permission-status'),
@@ -120,10 +124,11 @@ function updateUploadPermission() {
   els.uploadPermissionStatus.classList.toggle('allowed', allowed);
 }
 
-function resetReviewState() {
+function resetReviewState({ preserveProviderLinks = false } = {}) {
+  const providerLinks = preserveProviderLinks ? { ...state.providerLinks } : {};
   state.overrides = {};
   state.links = {};
-  state.providerLinks = {};
+  state.providerLinks = providerLinks;
   state.memos = {};
   saveLocalState();
 }
@@ -134,8 +139,13 @@ function effectiveRows() {
     evidenceUrl: getEffectiveEvidenceUrl(row, state.links, state.providerLinks),
     accountEvidenceUrl: state.links[row.id] || '',
     providerEvidenceUrl: state.providerLinks[row.provider] || '',
+    providerFolderEvidenceUrl: state.providerLinks[providerFolderKey(row.provider)] || '',
     memo: state.memos[row.id] || '',
   }));
+}
+
+function providerFolderKey(provider) {
+  return `${FOLDER_LINK_PREFIX}${provider || ''}`;
 }
 
 function currentFilters() {
@@ -157,8 +167,10 @@ function renderProviderOptions(rows) {
 
 function renderTableHead() {
   const visibleMonths = getVisibleMonths(state.data.monthColumns, els.recentMonthsOnly.checked);
-  els.reviewTable.style.minWidth = els.recentMonthsOnly.checked ? '1460px' : '1900px';
-  els.reviewTable.style.width = els.recentMonthsOnly.checked ? '1460px' : '1900px';
+  const ownerVisible = els.showOwnerColumn.checked;
+  const tableWidth = (els.recentMonthsOnly.checked ? 1460 : 1900) - (ownerVisible ? 0 : 140);
+  els.reviewTable.style.minWidth = `${tableWidth}px`;
+  els.reviewTable.style.width = `${tableWidth}px`;
   const monthHeaders = visibleMonths
     .map((month) => {
       const className = month.isCurrent ? 'number current-cost' : 'number';
@@ -174,7 +186,7 @@ function renderTableHead() {
       <th>${t('team')}</th>
       <th>${t('project')}</th>
       <th>${t('account')}</th>
-      <th>${t('owner')}</th>
+      ${ownerVisible ? `<th>${t('owner')}</th>` : ''}
       <th>${t('costReviewer')}</th>
       ${monthHeaders}
       <th class="number">${t('diff')}</th>
@@ -215,6 +227,7 @@ function rowTemplate(row) {
   const verified = rowIsVerified(row);
   const localVerified = rowIsLocallyVerified(row);
   const visibleMonths = getVisibleMonths(row.months, els.recentMonthsOnly.checked);
+  const ownerCell = els.showOwnerColumn.checked ? `<td>${escapeHtml(row.owner)}</td>` : '';
   const monthCells = visibleMonths
     .map((month) => {
       const className = month.isCurrent ? 'number current-cost' : 'number';
@@ -230,7 +243,7 @@ function rowTemplate(row) {
       ? t('providerLink')
       : t('linkInput');
   const action = verified
-    ? `<span class="verified-mark ${localVerified ? 'web-mark' : 'source-mark'}">${localVerified ? 'v' : 'v'}</span>`
+    ? `<span class="verified-mark ${localVerified ? 'web-mark' : 'source-mark'}">v</span>`
     : `<button class="row-button" data-action="verify">${t('verifyButton')}</button>`;
 
   return `
@@ -241,7 +254,7 @@ function rowTemplate(row) {
       <td>${escapeHtml(row.team)}</td>
       <td>${escapeHtml(row.project)}</td>
       <td title="${escapeAttr(row.account)}">${escapeHtml(row.account)}</td>
-      <td>${escapeHtml(row.owner)}</td>
+      ${ownerCell}
       <td>${escapeHtml(row.costReviewer)}</td>
       ${monthCells}
       <td class="number ${diffClass}">${formatCurrency(row.diff)}</td>
@@ -279,16 +292,21 @@ function renderDetail() {
   els.verifySelected.textContent = verified ? t('alreadyVerified') : t('verifySelected');
 
   const visibleMonths = getVisibleMonths(row.months, els.recentMonthsOnly.checked);
-  const maxVisibleMonth = Math.max(1, ...visibleMonths.map((month) => Number(month.value) || 0));
-  const bars = visibleMonths
+  const chartItems = buildMonthChartItems(visibleMonths);
+  const bars = chartItems
     .map((month) => {
-      const value = Math.max(0, Number(month.value) || 0);
-      const height = Math.max(4, Math.round((value / maxVisibleMonth) * 88));
-      return `<div class="bar ${month.isCurrent ? 'current' : ''}" title="${escapeAttr(month.header)}: ${formatCurrency(month.value)}" style="height:${height}%"></div>`;
+      return `
+        <div class="chart-column" title="${escapeAttr(month.header)}: ${month.valueLabel}">
+          <span class="bar-value" style="display:block;color:#111827;font-size:11px;font-weight:800;line-height:1.15;text-align:center;white-space:nowrap;overflow:visible;">${escapeHtml(month.valueLabel)}</span>
+          <div class="bar-wrap">
+            <div class="bar ${month.isCurrent ? 'current' : ''}" style="height:${month.height}%"></div>
+          </div>
+        </div>
+      `;
     })
     .join('');
-  const labels = visibleMonths
-    .map((month) => `<span>${escapeHtml(shortMonth(month.header))}</span>`)
+  const labels = chartItems
+    .map((month) => `<span>${escapeHtml(month.shortLabel)}</span>`)
     .join('');
 
   els.detailBody.innerHTML = `
@@ -309,16 +327,16 @@ function renderDetail() {
     <section class="detail-card">
       <h2>${t('providerSharedLink')}</h2>
       <div class="evidence-box">
+        <button id="open-provider-evidence" class="link-open-button" type="button" ${row.providerEvidenceUrl ? '' : 'disabled'}>${t('providerLink')}</button>
         <input id="provider-evidence-url-input" value="${escapeAttr(row.providerEvidenceUrl)}" placeholder="${escapeAttr(`${row.provider || 'Provider'} ${t('providerSharedPlaceholderSuffix')}`)}">
-        <div class="hint">${escapeHtml(row.provider || 'Provider')} ${t('providerSharedHint')}</div>
       </div>
     </section>
 
     <section class="detail-card">
       <h2>${t('accountOverrideLink')}</h2>
       <div class="evidence-box">
-        <input id="evidence-url-input" value="${escapeAttr(row.accountEvidenceUrl)}" placeholder="${escapeAttr(t('accountOverridePlaceholder'))}">
-        <div class="hint">${t('currentUsedLink')}: ${row.evidenceUrl ? escapeHtml(row.evidenceUrl) : t('none')}</div>
+        <button id="open-account-evidence" class="link-open-button" type="button" ${row.providerFolderEvidenceUrl ? '' : 'disabled'}>${t('accountOverrideLink')}</button>
+        <input id="evidence-url-input" value="${escapeAttr(row.providerFolderEvidenceUrl)}" placeholder="${escapeAttr(t('accountOverridePlaceholder'))}">
       </div>
     </section>
 
@@ -341,19 +359,34 @@ function renderDetail() {
     }
     saveLocalState();
     els.openEvidence.disabled = !getEffectiveEvidenceUrl(row, state.links, state.providerLinks);
+    document.querySelector('#open-provider-evidence').disabled = !value;
   });
   document.querySelector('#provider-evidence-url-input').addEventListener('change', render);
   document.querySelector('#evidence-url-input').addEventListener('input', (event) => {
     const value = event.target.value.trim();
+    const folderKey = providerFolderKey(row.provider);
     if (value) {
-      state.links[row.id] = value;
+      state.providerLinks[folderKey] = value;
     } else {
-      delete state.links[row.id];
+      delete state.providerLinks[folderKey];
     }
     saveLocalState();
     els.openEvidence.disabled = !getEffectiveEvidenceUrl(row, state.links, state.providerLinks);
+    document.querySelector('#open-account-evidence').disabled = !value;
   });
   document.querySelector('#evidence-url-input').addEventListener('change', render);
+  document.querySelector('#open-provider-evidence')?.addEventListener('click', () => {
+    const url = document.querySelector('#provider-evidence-url-input')?.value.trim();
+    if (url) {
+      window.open(normalizeExternalUrl(url), '_blank', 'noopener,noreferrer');
+    }
+  });
+  document.querySelector('#open-account-evidence')?.addEventListener('click', () => {
+    const url = document.querySelector('#evidence-url-input')?.value.trim();
+    if (url) {
+      window.open(normalizeExternalUrl(url), '_blank', 'noopener,noreferrer');
+    }
+  });
   document.querySelector('#memo-input').addEventListener('input', (event) => {
     state.memos[row.id] = event.target.value;
     saveLocalState();
@@ -392,7 +425,9 @@ function memoOverviewTemplate() {
 function renderMemoOverview() {
   const container = document.querySelector('.memo-overview-card');
   if (container) {
-    container.outerHTML = memoOverviewTemplate();
+    const tmp = document.createElement('div');
+    tmp.innerHTML = memoOverviewTemplate();
+    container.innerHTML = tmp.querySelector('.memo-overview-card').innerHTML;
   }
 }
 
@@ -421,7 +456,7 @@ function verifyRow(rowId) {
 function openEvidence(rowId) {
   const row = effectiveRows().find((candidate) => candidate.id === rowId);
   if (row?.evidenceUrl) {
-    window.open(row.evidenceUrl, '_blank', 'noopener,noreferrer');
+    window.open(normalizeExternalUrl(row.evidenceUrl), '_blank', 'noopener,noreferrer');
     return;
   }
   state.selectedId = rowId;
@@ -442,11 +477,6 @@ function escapeAttr(value) {
   return escapeHtml(value).replaceAll('\n', ' ');
 }
 
-function shortMonth(header) {
-  const value = String(header || '').replace('(KRW)', '').replace(/\s+/g, ' ').trim();
-  return value.split(' ')[0] || '-';
-}
-
 async function init() {
   loadLocalState();
   els.languageSelect.value = state.language;
@@ -462,6 +492,9 @@ async function loadData() {
   let response = await fetch(`/api/current?ts=${Date.now()}`, { cache: 'no-store' });
   if (!response.ok) {
     response = await fetch(`./data/cost-accounts.json?ts=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Failed to load cost-accounts.json: ${response.status} ${response.statusText}`);
+    }
   }
   state.data = await response.json();
   state.rows = state.data.rows;
@@ -473,7 +506,7 @@ async function loadData() {
 
 async function loadReviewState() {
   state.remoteReviewEnabled = false;
-  if (!state.workbookId) {
+  if (!state.workbookId || state.workbookId === 'local') {
     return;
   }
   try {
@@ -549,6 +582,7 @@ async function uploadWorkbook(file) {
   }
 
   els.resultSummary.textContent = `${file.name} ${t('uploadInProgress')}`;
+  const preservedProviderLinks = { ...state.providerLinks };
   const formData = new FormData();
   formData.append('workbook', file);
   formData.append('uploader', state.uploaderName);
@@ -564,7 +598,8 @@ async function uploadWorkbook(file) {
 
   const result = await response.json();
   await loadData();
-  resetReviewState();
+  state.providerLinks = { ...preservedProviderLinks, ...state.providerLinks };
+  resetReviewState({ preserveProviderLinks: true });
   resetProviderOptions();
   renderProviderOptions(state.rows);
   renderTableHead();
@@ -626,6 +661,10 @@ els.reviewerSearch.addEventListener('input', render);
 els.providerFilter.addEventListener('change', render);
 els.statusFilter.addEventListener('change', render);
 els.recentMonthsOnly.addEventListener('change', () => {
+  renderTableHead();
+  render();
+});
+els.showOwnerColumn.addEventListener('change', () => {
   renderTableHead();
   render();
 });

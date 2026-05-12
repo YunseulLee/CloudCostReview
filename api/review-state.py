@@ -25,6 +25,9 @@ class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         payload = self.read_json()
         workbook_id = payload.get("workbookId")
+        if workbook_id is None:
+            self.send_json({"error": "workbookId is required"}, status=400)
+            return
         if not supabase_is_configured() or not workbook_id or workbook_id == "local":
             self.send_json({"ok": True, "mode": "local"})
             return

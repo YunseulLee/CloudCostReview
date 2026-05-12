@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import sys
 import zipfile
@@ -6,13 +7,27 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 
-DEFAULT_WORKBOOK_PATH = Path(
-    "/Users/ralrariralra/Library/CloudStorage/OneDrive-KRAFTON/itinfra - 3. 건별 구매,정산 (Cloud, , 21년2월~)/2026y/2026-05/Cloud Cost of 2026-04.xlsx"
-)
+DEFAULT_WORKBOOK_PATH = os.environ.get("WORKBOOK_PATH")
 DEFAULT_OUTPUT_PATH = Path("data/cost-accounts.json")
 HEADER_ROW = 3
 FIRST_DATA_ROW = 4
 MONTH_COLUMNS = list(range(12, 24))
+
+COL_PROVIDER = 1
+COL_ENTITY = 2
+COL_STUDIO = 3
+COL_TEAM = 4
+COL_PROJECT = 5
+COL_TEAM_CODE = 6
+COL_PROJECT_CODE = 7
+COL_ACCOUNT = 8
+COL_OWNER = 9
+COL_COST_REVIEWER = 10
+COL_VERIFIED = 11
+COL_CURRENT_COST = 23
+COL_DIFF = 25
+COL_DIFF_RATE = 26
+COL_ENTITY_CODE = 27
 
 NS = {
     "main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
@@ -98,6 +113,8 @@ def resolve_sheet_path(archive, sheet_name):
             return sheet["path"]
 
     raise ValueError(f"Sheet not found: {sheet_name}")
+
+
 def cell_value(cell, shared_strings):
     cell_type = cell.attrib.get("t")
     value_node = cell.find("main:v", NS)
@@ -148,8 +165,8 @@ def extract_workbook_payload(workbook_path, sheet_name=None):
     rows = []
     for row_number in sorted(number for number in parsed_rows if number >= FIRST_DATA_ROW):
         values = parsed_rows[row_number]
-        account = clean(values.get(8))
-        provider = clean(values.get(1))
+        account = clean(values.get(COL_ACCOUNT))
+        provider = clean(values.get(COL_PROVIDER))
         if not account and not provider:
             continue
 
@@ -158,7 +175,7 @@ def extract_workbook_payload(workbook_path, sheet_name=None):
                 "column": column,
                 "header": headers[column],
                 "value": values.get(column),
-                "isCurrent": column == 23,
+                "isCurrent": column == MONTH_COLUMNS[-1],
             }
             for column in MONTH_COLUMNS
         ]
@@ -168,21 +185,21 @@ def extract_workbook_payload(workbook_path, sheet_name=None):
                 "id": f"row-{row_number}",
                 "rowNumber": row_number,
                 "provider": provider,
-                "entity": clean(values.get(2)),
-                "studio": clean(values.get(3)),
-                "team": clean(values.get(4)),
-                "project": clean(values.get(5)),
-                "teamCode": clean(values.get(6)),
-                "projectCode": clean(values.get(7)),
+                "entity": clean(values.get(COL_ENTITY)),
+                "studio": clean(values.get(COL_STUDIO)),
+                "team": clean(values.get(COL_TEAM)),
+                "project": clean(values.get(COL_PROJECT)),
+                "teamCode": clean(values.get(COL_TEAM_CODE)),
+                "projectCode": clean(values.get(COL_PROJECT_CODE)),
                 "account": account,
-                "owner": clean(values.get(9)),
-                "costReviewer": clean(values.get(10)),
-                "verified": clean(values.get(11)),
+                "owner": clean(values.get(COL_OWNER)),
+                "costReviewer": clean(values.get(COL_COST_REVIEWER)),
+                "verified": clean(values.get(COL_VERIFIED)),
                 "months": months,
-                "currentCost": values.get(23),
-                "diff": values.get(25),
-                "diffRate": values.get(26),
-                "entityCode": clean(values.get(27)),
+                "currentCost": values.get(COL_CURRENT_COST),
+                "diff": values.get(COL_DIFF),
+                "diffRate": values.get(COL_DIFF_RATE),
+                "entityCode": clean(values.get(COL_ENTITY_CODE)),
                 "evidenceUrl": "",
             }
         )
@@ -194,7 +211,7 @@ def extract_workbook_payload(workbook_path, sheet_name=None):
         "verifiedColumn": "K",
         "currentCostColumn": "W",
         "monthColumns": [
-            {"column": column, "header": headers[column], "isCurrent": column == 23}
+            {"column": column, "header": headers[column], "isCurrent": column == MONTH_COLUMNS[-1]}
             for column in MONTH_COLUMNS
         ],
         "rows": rows,
@@ -212,6 +229,10 @@ def write_payload(payload, output_path=DEFAULT_OUTPUT_PATH):
 
 def main():
     workbook_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_WORKBOOK_PATH
+    if workbook_path is None:
+        print("Error: WORKBOOK_PATH environment variable is not set. Pass the file path as an argument or set WORKBOOK_PATH.", file=sys.stderr)
+        sys.exit(1)
+    workbook_path = Path(workbook_path)
     output_path = Path(sys.argv[2]) if len(sys.argv) > 2 else DEFAULT_OUTPUT_PATH
     payload = extract_workbook_payload(workbook_path)
     write_payload(payload, output_path)

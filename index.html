@@ -11,12 +11,6 @@
     <header class="topbar">
       <div class="brand">
         <strong>Cloud Cost Review</strong>
-        <span id="sheet-name" class="chip">Usage Apr 2026</span>
-      </div>
-      <div class="top-meta">
-        <span data-i18n="topMetaW">W열 현재 비용</span>
-        <span>·</span>
-        <span data-i18n="topMeta12">12개월 비교</span>
       </div>
     </header>
 
@@ -24,14 +18,14 @@
       <label class="control language-control">
         <span data-i18n="language">Language</span>
         <select id="language-select">
-          <option value="ko">한국어</option>
+          <option value="ko">KR</option>
           <option value="en">English</option>
         </select>
       </label>
 
       <label class="control reviewer-control">
         <span data-i18n="reviewerSearch">검수자 검색</span>
-        <input id="reviewer-search" type="search" placeholder="이윤슬" autocomplete="off">
+        <input id="reviewer-search" type="search" placeholder="예 : 이윤슬" autocomplete="off">
       </label>
 
       <label class="control provider-control">
@@ -45,14 +39,19 @@
         <span data-i18n="status">상태</span>
         <select id="status-filter">
           <option value="open" data-i18n="statusOpen">미검수 우선</option>
-          <option value="all" data-i18n="statusAll">전체</option>
+          <option value="all" data-i18n="statusAll" selected>전체</option>
           <option value="verified" data-i18n="statusVerified">검수 완료</option>
         </select>
       </label>
 
       <label class="toggle-control">
         <input id="recent-months-only" type="checkbox">
-        <span data-i18n="recentOnly">최근 3개월만 보기</span>
+        <span data-i18n="recentOnly">12개월값 보기</span>
+      </label>
+
+      <label class="toggle-control owner-toggle">
+        <input id="show-owner-column" type="checkbox">
+        <span data-i18n="showOwner">Owner 보기</span>
       </label>
 
       <label class="upload-control">
@@ -77,7 +76,7 @@
     <section class="workspace">
       <section class="sheet-panel" aria-label="비용 검수 표">
         <div class="panel-title">
-        <strong data-i18n="tableTitle">엑셀 유사 표 보기</strong>
+        <strong id="sheet-name" class="sheet-title">시트 제목</strong>
           <span id="result-summary" data-i18n="loadingData">데이터를 불러오는 중입니다.</span>
         </div>
         <div class="sheet-scroll">

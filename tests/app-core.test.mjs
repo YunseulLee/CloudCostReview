@@ -8,9 +8,11 @@ import {
   canManageProtectedActions,
   filterRows,
   formatCurrency,
+  buildMonthChartItems,
   getEffectiveEvidenceUrl,
   getRowsWithMemos,
   getVisibleMonths,
+  normalizeExternalUrl,
   uploaderIsAllowed,
   normalizeText,
   rowIsLocallyVerified,
@@ -97,13 +99,18 @@ test('formatCurrency returns compact KRW strings for table cells', () => {
   assert.equal(formatCurrency(null), '-');
 });
 
-test('getVisibleMonths keeps all months unless recent-only mode is enabled', () => {
+test('getVisibleMonths shows recent months by default and all months when enabled', () => {
   const months = Array.from({ length: 12 }, (_, index) => ({
     header: `M${index + 1}`,
     value: index + 1,
   }));
 
   assert.deepEqual(getVisibleMonths(months, false).map((month) => month.header), [
+    'M10',
+    'M11',
+    'M12',
+  ]);
+  assert.deepEqual(getVisibleMonths(months, true).map((month) => month.header), [
     'M1',
     'M2',
     'M3',
@@ -117,11 +124,23 @@ test('getVisibleMonths keeps all months unless recent-only mode is enabled', () 
     'M11',
     'M12',
   ]);
-  assert.deepEqual(getVisibleMonths(months, true).map((month) => month.header), [
-    'M10',
-    'M11',
-    'M12',
+});
+
+test('buildMonthChartItems includes KRW labels for each chart bar', () => {
+  const items = buildMonthChartItems([
+    { header: 'Feb 2026(KRW)', value: 56879 },
+    { header: 'Mar 2026(KRW)', value: 49010 },
+    { header: 'Apr 2026(KRW)', value: 14711, isCurrent: true },
   ]);
+
+  assert.deepEqual(
+    items.map((item) => item.valueLabel),
+    ['56,879원', '49,010원', '14,711원'],
+  );
+  assert.deepEqual(
+    items.map((item) => item.shortLabel),
+    ['Feb', 'Mar', 'Apr'],
+  );
 });
 
 test('getEffectiveEvidenceUrl uses provider link when account link is blank', () => {
@@ -140,6 +159,19 @@ test('getEffectiveEvidenceUrl prefers account link over provider link', () => {
   );
 
   assert.equal(result, 'https://account.example/aws-row-10');
+});
+
+test('getEffectiveEvidenceUrl uses provider folder link when detail links are blank', () => {
+  const row = { id: 'row-10', provider: 'AWS', evidenceUrl: '' };
+  const result = getEffectiveEvidenceUrl(row, {}, { 'folder::AWS': 'https://folder.example/aws' });
+
+  assert.equal(result, 'https://folder.example/aws');
+});
+
+test('normalizeExternalUrl adds https when protocol is missing', () => {
+  assert.equal(normalizeExternalUrl('docs.google.com/file'), 'https://docs.google.com/file');
+  assert.equal(normalizeExternalUrl('https://docs.google.com/file'), 'https://docs.google.com/file');
+  assert.equal(normalizeExternalUrl(''), '');
 });
 
 test('getRowsWithMemos returns rows that have non-empty review memos', () => {
@@ -169,8 +201,19 @@ test('getRowsWithMemos returns rows that have non-empty review memos', () => {
 test('uiText returns English and Korean labels with Korean fallback', () => {
   assert.equal(uiText('reviewerSearch', 'ko'), '검수자 검색');
   assert.equal(uiText('reviewerSearch', 'en'), 'Reviewer');
-  assert.equal(uiText('reviewerPlaceholder', 'ko'), '이윤슬');
-  assert.equal(uiText('reviewerPlaceholder', 'en'), 'Yunseul Lee');
+  assert.equal(uiText('reviewerPlaceholder', 'ko'), '예 : 이윤슬');
+  assert.equal(uiText('reviewerPlaceholder', 'en'), 'e.g. Yunseul Lee');
+  assert.equal(uiText('recentOnly', 'ko'), '12개월값 보기');
+  assert.equal(uiText('recentOnly', 'en'), 'Show 12 months');
+  assert.equal(uiText('showOwner', 'ko'), 'Owner 보기');
+  assert.equal(uiText('showOwner', 'en'), 'Show Owner');
+  assert.equal(uiText('evidenceLink', 'ko'), 'Link');
+  assert.equal(uiText('accountLink', 'ko'), 'Link');
+  assert.equal(uiText('providerLink', 'ko'), 'Link');
+  assert.equal(uiText('accountOverrideLink', 'ko'), '상세내역 폴더링크');
+  assert.equal(uiText('verifyButton', 'ko'), 'Check');
+  assert.equal(uiText('verifySelected', 'ko'), 'Check');
+  assert.equal(uiText('memoPlaceholder', 'ko'), '비용 증감 사유를 작성해주세요.');
   assert.equal(uiText('language', 'ko'), 'Language');
   assert.equal(uiText('uploadOperatorPlaceholder', 'ko'), '');
   assert.equal(uiText('reviewerSearch', 'fr'), '검수자 검색');
@@ -206,7 +249,10 @@ test('buildReviewStatePayload serializes checks links provider links and memos',
     rows,
     overrides: { 'row-4': true, 'row-6': false },
     links: { 'row-4': 'https://account.example/detail' },
-    providerLinks: { AWS: 'https://provider.example/aws' },
+    providerLinks: {
+      AWS: 'https://provider.example/aws',
+      'folder::AWS': 'https://provider.example/folder',
+    },
     memos: { 'row-6': 'need follow-up' },
   });
 
@@ -237,6 +283,7 @@ test('buildReviewStatePayload serializes checks links provider links and memos',
     ],
     providerLinks: {
       AWS: 'https://provider.example/aws',
+      'folder::AWS': 'https://provider.example/folder',
     },
   });
 });
