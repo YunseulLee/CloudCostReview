@@ -54,6 +54,11 @@ const els = {
   clearLocal: document.querySelector('#clear-local'),
   clearMemos: document.querySelector('#clear-memos'),
   downloadReviewed: document.querySelector('#download-reviewed'),
+  confirmModal: document.querySelector('#confirm-modal'),
+  modalTitle: document.querySelector('#modal-title'),
+  modalBody: document.querySelector('#modal-body'),
+  modalCancel: document.querySelector('#modal-cancel'),
+  modalConfirm: document.querySelector('#modal-confirm'),
   resultSummary: document.querySelector('#result-summary'),
   reviewTable: document.querySelector('#review-table'),
   tableHead: document.querySelector('#table-head'),
@@ -693,16 +698,44 @@ els.clearLocal.addEventListener('click', () => {
   render();
   els.resultSummary.textContent = t('resetComplete');
 });
+function openConfirmModal({ title, body, onConfirm }) {
+  els.modalTitle.textContent = title;
+  els.modalBody.textContent = body;
+  els.modalConfirm.textContent = t('confirmDelete');
+  els.modalCancel.textContent = t('cancel');
+  els.confirmModal.hidden = false;
+  els.modalConfirm.onclick = () => {
+    els.confirmModal.hidden = true;
+    onConfirm();
+  };
+  els.modalCancel.onclick = () => {
+    els.confirmModal.hidden = true;
+  };
+}
+
+els.confirmModal.addEventListener('click', (event) => {
+  if (event.target === els.confirmModal) {
+    els.confirmModal.hidden = true;
+  }
+});
+
 els.clearMemos.addEventListener('click', () => {
   if (!canManageProtectedActions(state.uploaderName)) {
     els.resultSummary.textContent = t('uploadLocked');
     return;
   }
-  state.memos = {};
-  saveLocalState();
-  scheduleRemoteStateSave();
-  render();
-  els.resultSummary.textContent = t('clearMemosComplete');
+  const count = Object.values(state.memos).filter((m) => String(m).trim()).length;
+  openConfirmModal({
+    title: t('clearMemosDialogTitle'),
+    body: `${count}${t('clearMemosDialogCount')}\n${t('clearMemosDialogBody').split('\n')[1]}`,
+    onConfirm: () => {
+      state.memos = {};
+      saveLocalState();
+      scheduleRemoteStateSave();
+      render();
+      els.resultSummary.textContent = t('clearMemosComplete');
+    },
+  });
 });
 els.downloadReviewed.addEventListener('click', async () => {
   try {
