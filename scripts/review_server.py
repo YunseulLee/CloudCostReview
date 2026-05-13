@@ -24,8 +24,25 @@ _env_uploaders = os.environ.get("ALLOWED_UPLOADERS", "")
 ALLOWED_UPLOADERS = {n.strip().lower() for n in _env_uploaders.split(",") if n.strip()} or {"이윤슬", "yunseul", "yunseul lee"}
 VERIFIED_COLUMN = "K"
 
+_DEFAULT_ALLOWED_IPS = {
+    "<redacted>", "<redacted>", "<redacted>", "<redacted>", "<redacted>",
+    "<redacted>", "<redacted>", "<redacted>",
+    "<redacted>", "<redacted>", "<redacted>7",
+    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
+    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
+    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
+    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
+    "<redacted>", "<redacted>", "<redacted>", "<redacted>", "<redacted>",
+    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
+    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
+    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
+    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
+    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
+    "<redacted>", "<redacted>", "<redacted>",
+}
 _env_ips = os.environ.get("ALLOWED_IPS", "")
-ALLOWED_IPS = {ip.strip() for ip in _env_ips.split(",") if ip.strip()}
+_extra_ips = {ip.strip() for ip in _env_ips.split(",") if ip.strip()}
+ALLOWED_IPS = _DEFAULT_ALLOWED_IPS | _extra_ips
 
 
 def ip_is_allowed(ip):
