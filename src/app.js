@@ -497,12 +497,17 @@ async function init() {
 }
 
 async function loadData() {
-  let response = await fetch(`/api/current?ts=${Date.now()}`, { cache: 'no-store' });
-  if (!response.ok) {
-    response = await fetch(`./data/cost-accounts.json?ts=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) {
-      throw new Error(`Failed to load cost-accounts.json: ${response.status} ${response.statusText}`);
+  const apiResponse = await fetch(`/api/current?ts=${Date.now()}`, { cache: 'no-store' });
+  if (apiResponse.status === 403 || apiResponse.status === 401) {
+    throw new Error(`Access denied (${apiResponse.status})`);
+  }
+  let response = apiResponse;
+  if (!apiResponse.ok) {
+    const fallback = await fetch(`./data/cost-accounts.json?ts=${Date.now()}`, { cache: 'no-store' });
+    if (!fallback.ok) {
+      throw new Error(`Failed to load data: ${fallback.status} ${fallback.statusText}`);
     }
+    response = fallback;
   }
   state.data = await response.json();
   state.rows = state.data.rows;

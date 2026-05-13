@@ -16,6 +16,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from lib.ip_guard import ALLOWED_IPS, ip_is_allowed
 from scripts.extract_cost_data import extract_workbook_payload, resolve_sheet_path, write_payload
 
 UPLOADS_DIR = ROOT_DIR / "uploads"
@@ -23,32 +24,6 @@ DATA_PATH = ROOT_DIR / "data" / "cost-accounts.json"
 _env_uploaders = os.environ.get("ALLOWED_UPLOADERS", "")
 ALLOWED_UPLOADERS = {n.strip().lower() for n in _env_uploaders.split(",") if n.strip()} or {"이윤슬", "yunseul", "yunseul lee"}
 VERIFIED_COLUMN = "K"
-
-_DEFAULT_ALLOWED_IPS = {
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>7",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>",
-}
-_env_ips = os.environ.get("ALLOWED_IPS", "")
-_extra_ips = {ip.strip() for ip in _env_ips.split(",") if ip.strip()}
-ALLOWED_IPS = _DEFAULT_ALLOWED_IPS | _extra_ips
-
-
-def ip_is_allowed(ip):
-    if not ALLOWED_IPS:
-        return True
-    return ip in ALLOWED_IPS
 
 
 def normalize_uploader_name(name):
