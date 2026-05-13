@@ -8,6 +8,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from lib.ip_guard import check_request_ip
 from lib.supabase_store import download_workbook_bytes, get_active_workbook, supabase_is_configured
 from scripts.review_server import (
     DATA_PATH,
@@ -25,6 +26,8 @@ def reviewed_filename(original_stem, count):
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
+        if not check_request_ip(self):
+            return
         payload = self.read_json()
         if not uploader_is_allowed(payload.get("uploader")):
             self.send_error(403, "This uploader is not allowed to export reviewed Excel files")

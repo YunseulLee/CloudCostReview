@@ -7,12 +7,15 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from lib.ip_guard import check_request_ip
 from lib.supabase_store import get_current_payload, supabase_is_configured
 from scripts.review_server import DATA_PATH
 
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if not check_request_ip(self):
+            return
         payload = None
         if supabase_is_configured():
             payload = get_current_payload()

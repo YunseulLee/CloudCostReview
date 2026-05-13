@@ -8,6 +8,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from lib.ip_guard import check_request_ip
 from lib.supabase_store import get_review_state, save_review_state, supabase_is_configured
 
 
@@ -16,6 +17,8 @@ EMPTY_STATE = {"overrides": {}, "links": {}, "providerLinks": {}, "memos": {}}
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if not check_request_ip(self):
+            return
         workbook_id = self.query_param("workbookId")
         if not supabase_is_configured() or not workbook_id or workbook_id == "local":
             self.send_json(EMPTY_STATE)
@@ -23,6 +26,8 @@ class handler(BaseHTTPRequestHandler):
         self.send_json(get_review_state(workbook_id))
 
     def do_POST(self):
+        if not check_request_ip(self):
+            return
         payload = self.read_json()
         workbook_id = payload.get("workbookId")
         if workbook_id is None:

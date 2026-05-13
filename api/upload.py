@@ -9,12 +9,15 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from lib.ip_guard import check_request_ip
 from lib.supabase_store import supabase_is_configured, upload_workbook
 from scripts.review_server import process_uploaded_workbook, uploader_is_allowed
 
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
+        if not check_request_ip(self):
+            return
         content_type = self.headers.get("Content-Type", "")
         if not content_type.startswith("multipart/form-data"):
             self.send_error(400, "multipart/form-data is required")
