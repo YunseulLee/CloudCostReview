@@ -24,6 +24,15 @@ _env_uploaders = os.environ.get("ALLOWED_UPLOADERS", "")
 ALLOWED_UPLOADERS = {n.strip().lower() for n in _env_uploaders.split(",") if n.strip()} or {"이윤슬", "yunseul", "yunseul lee"}
 VERIFIED_COLUMN = "K"
 
+_env_ips = os.environ.get("ALLOWED_IPS", "")
+ALLOWED_IPS = {ip.strip() for ip in _env_ips.split(",") if ip.strip()}
+
+
+def ip_is_allowed(ip):
+    if not ALLOWED_IPS:
+        return True
+    return ip in ALLOWED_IPS
+
 
 def normalize_uploader_name(name):
     normalized = unicodedata.normalize("NFC", str(name or "")).strip().lower()
@@ -204,7 +213,16 @@ class ReviewRequestHandler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
 
+    def check_ip(self):
+        client_ip = self.client_address[0]
+        if not ip_is_allowed(client_ip):
+            self.send_error(403, f"Access denied: {client_ip} is not in the allowed IP list")
+            return False
+        return True
+
     def do_GET(self):
+        if not self.check_ip():
+            return
         if self.path.startswith("/api/current"):
             payload = json.loads(DATA_PATH.read_text(encoding="utf-8"))
             payload["workbookId"] = "local"
@@ -216,6 +234,8 @@ class ReviewRequestHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
+        if not self.check_ip():
+            return
         if self.path == "/api/upload":
             self.handle_upload()
             return
@@ -326,9 +346,13 @@ def resolve_static_path(path):
     return candidate
 
 
-def run(host="127.0.0.1", port=61888):
+def run(host="0.0.0.0", port=61888):
     mimetypes.add_type("text/javascript", ".js")
     server = ThreadingHTTPServer((host, port), ReviewRequestHandler)
+    if ALLOWED_IPS:
+        print(f"Allowed IPs: {', '.join(sorted(ALLOWED_IPS))}")
+    else:
+        print("Allowed IPs: all (set ALLOWED_IPS env var to restrict)")
     print(f"Cloud Cost Review server running at http://{host}:{port}/")
     server.serve_forever()
 
