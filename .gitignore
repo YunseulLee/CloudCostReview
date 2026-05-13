@@ -1,1 +1,3 @@
 data/cost-accounts.json
+.vercel
+.env*.local

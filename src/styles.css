@@ -61,10 +61,10 @@ select {
 
 .toolbar {
   display: grid;
-  grid-template-columns: repeat(13, minmax(0, 1fr));
+  grid-template-columns: repeat(14, minmax(0, 1fr));
   grid-template-areas:
-    "language reviewer reviewer reviewer provider provider status status recent realusage . kpis kpis"
-    "upload upload uploader uploader uploader permission permission clearmemos reset export owner kpis kpis";
+    "language language reviewer reviewer reviewer provider provider status status recent realusage . kpis kpis"
+    "upload upload uploader uploader uploader permission permission clearmemos reset export owner owner kpis kpis";
   align-items: center;
   gap: 10px 12px;
   padding: 10px 18px;
@@ -78,6 +78,8 @@ select {
 
 .language-control {
   grid-area: language;
+  grid-template-columns: auto minmax(64px, 76px);
+  min-width: 176px;
 }
 
 .reviewer-control {
