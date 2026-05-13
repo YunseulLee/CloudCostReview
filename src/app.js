@@ -34,6 +34,7 @@ const state = {
   uploaderName: '',
   workbookId: null,
   remoteReviewEnabled: false,
+  downloadCount: 0,
 };
 
 let remoteSaveTimer = null;
@@ -618,6 +619,7 @@ async function downloadReviewedWorkbook() {
     return;
   }
 
+  state.downloadCount += 1;
   els.resultSummary.textContent = t('downloadInProgress');
   const response = await fetch('/api/export-reviewed', {
     method: 'POST',
@@ -625,6 +627,7 @@ async function downloadReviewedWorkbook() {
     body: JSON.stringify({
       uploader: state.uploaderName,
       rows: buildReviewExportRows(effectiveRows()),
+      count: state.downloadCount,
     }),
   });
   if (!response.ok) {

@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
@@ -17,6 +18,11 @@ from scripts.review_server import (
 )
 
 
+def reviewed_filename(original_stem, count):
+    base = re.sub(r'_reviewed(_\d+)?$', '', safe_filename(original_stem))
+    return f"{base}_reviewed_{count}.xlsx"
+
+
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         payload = self.read_json()
@@ -24,6 +30,7 @@ class handler(BaseHTTPRequestHandler):
             self.send_error(403, "This uploader is not allowed to export reviewed Excel files")
             return
 
+        count = max(1, int(payload.get("count") or 1))
         try:
             if supabase_is_configured():
                 workbook = get_active_workbook()
@@ -35,11 +42,11 @@ class handler(BaseHTTPRequestHandler):
                     workbook["sheet_name"],
                     payload.get("rows", []),
                 )
-                filename = f"{safe_filename(Path(workbook['filename']).stem)}_reviewed.xlsx"
+                filename = reviewed_filename(Path(workbook['filename']).stem, count)
             else:
                 body = build_reviewed_workbook(DATA_PATH, payload.get("rows", []))
                 data = json.loads(DATA_PATH.read_text(encoding="utf-8"))
-                filename = f"{safe_filename(Path(data.get('sourceWorkbook', 'cloud-cost.xlsx')).stem)}_reviewed.xlsx"
+                filename = reviewed_filename(Path(data.get('sourceWorkbook', 'cloud-cost.xlsx')).stem, count)
         except Exception as exc:
             self.send_error(400, f"Reviewed workbook export failed: {exc}")
             return
