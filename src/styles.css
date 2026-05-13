@@ -63,8 +63,8 @@ select {
   display: grid;
   grid-template-columns: repeat(13, minmax(0, 1fr));
   grid-template-areas:
-    "language reviewer reviewer reviewer provider provider status status recent realusage owner kpis kpis"
-    "upload upload uploader uploader uploader permission permission clearmemos reset export . kpis kpis";
+    "language reviewer reviewer reviewer provider provider status status recent realusage . kpis kpis"
+    "upload upload uploader uploader uploader permission permission clearmemos reset export owner kpis kpis";
   align-items: center;
   gap: 10px 12px;
   padding: 10px 18px;
@@ -795,8 +795,8 @@ button:disabled {
     grid-template-columns: repeat(8, minmax(0, 1fr));
     grid-template-areas:
       "reviewer reviewer reviewer provider provider status status language"
-      "recent realusage owner upload upload uploader permission permission"
-      "kpis kpis kpis kpis kpis clearmemos reset export";
+      "recent realusage upload upload uploader uploader permission permission"
+      "owner kpis kpis kpis kpis clearmemos reset export";
   }
 }
 
