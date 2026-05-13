@@ -1,28 +1,12 @@
 import os
 
-_DEFAULT_ALLOWED_IPS = {
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>7",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>", "<redacted>",
-    "<redacted>", "<redacted>", "<redacted>",
-}
-
 _env_ips = os.environ.get("ALLOWED_IPS", "")
-_extra_ips = {ip.strip() for ip in _env_ips.split(",") if ip.strip()}
-ALLOWED_IPS = _DEFAULT_ALLOWED_IPS | _extra_ips
+ALLOWED_IPS = {ip.strip() for ip in _env_ips.split(",") if ip.strip()}
 
 
 def ip_is_allowed(ip):
+    if not ALLOWED_IPS:
+        return True
     return ip in ALLOWED_IPS
 
 
