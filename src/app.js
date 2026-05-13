@@ -47,6 +47,7 @@ const els = {
   statusFilter: document.querySelector('#status-filter'),
   recentMonthsOnly: document.querySelector('#recent-months-only'),
   showOwnerColumn: document.querySelector('#show-owner-column'),
+  hideRealUsage: document.querySelector('#hide-real-usage'),
   workbookUpload: document.querySelector('#workbook-upload'),
   uploaderName: document.querySelector('#uploader-name'),
   uploadPermissionStatus: document.querySelector('#upload-permission-status'),
@@ -161,6 +162,7 @@ function currentFilters() {
     reviewer: els.reviewerSearch.value,
     provider: els.providerFilter.value,
     status: els.statusFilter.value,
+    hideRealUsage: els.hideRealUsage.checked,
   };
 }
 
@@ -683,6 +685,7 @@ els.showOwnerColumn.addEventListener('change', () => {
   renderTableHead();
   render();
 });
+els.hideRealUsage.addEventListener('change', render);
 els.workbookUpload.addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
   try {

@@ -61,10 +61,10 @@ select {
 
 .toolbar {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: repeat(13, minmax(0, 1fr));
   grid-template-areas:
-    "language reviewer reviewer reviewer provider provider status status recent owner kpis kpis"
-    "upload upload uploader uploader uploader permission permission clearmemos reset export kpis kpis";
+    "language reviewer reviewer reviewer provider provider status status recent realusage owner kpis kpis"
+    "upload upload uploader uploader uploader permission permission clearmemos reset export . kpis kpis";
   align-items: center;
   gap: 10px 12px;
   padding: 10px 18px;
@@ -98,6 +98,10 @@ select {
 
 .owner-toggle {
   grid-area: owner;
+}
+
+.real-usage-toggle {
+  grid-area: realusage;
 }
 
 .upload-control {
@@ -772,8 +776,8 @@ button:disabled {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     grid-template-areas:
       "reviewer reviewer provider status"
-      "language recent owner uploader"
-      "upload upload permission permission"
+      "language recent realusage owner"
+      "upload upload uploader permission"
       "kpis clearmemos reset export";
   }
 
@@ -791,7 +795,7 @@ button:disabled {
     grid-template-columns: repeat(8, minmax(0, 1fr));
     grid-template-areas:
       "reviewer reviewer reviewer provider provider status status language"
-      "recent owner upload upload uploader uploader permission permission"
+      "recent realusage owner upload upload uploader permission permission"
       "kpis kpis kpis kpis kpis clearmemos reset export";
   }
 }
@@ -821,6 +825,7 @@ button:disabled {
       "language"
       "recent"
       "owner"
+      "realusage"
       "uploader"
       "upload"
       "permission"

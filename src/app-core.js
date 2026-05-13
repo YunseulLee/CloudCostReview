@@ -13,6 +13,7 @@ const UI_TEXT = {
   statusVerified: { ko: '검수 완료', en: 'Verified' },
   recentOnly: { ko: '12개월값 보기', en: 'Show 12 months' },
   showOwner: { ko: 'Owner 보기', en: 'Show Owner' },
+  hideRealUsage: { ko: 'Real usage 숨기기', en: 'Hide Real usage' },
   uploadWorkbook: { ko: '월별 엑셀 업로드', en: 'Upload monthly Excel' },
   uploadOperator: { ko: '업로드 담당자', en: 'Uploader' },
   uploadOperatorPlaceholder: { ko: '', en: '' },
@@ -181,6 +182,7 @@ export function filterRows(rows, filters = {}) {
   const reviewer = normalizeText(filters.reviewer);
   const provider = normalizeText(filters.provider);
   const status = normalizeText(filters.status || 'all');
+  const hideRealUsage = filters.hideRealUsage === true;
 
   return rows.filter((row) => {
     const reviewerMatches = !reviewer || normalizeText(row.costReviewer).includes(reviewer);
@@ -190,8 +192,9 @@ export function filterRows(rows, filters = {}) {
       status === 'all' ||
       (status === 'open' && !verified) ||
       (status === 'verified' && verified);
+    const entityMatches = !hideRealUsage || normalizeText(row.entity) !== 'real usage';
 
-    return reviewerMatches && providerMatches && statusMatches;
+    return reviewerMatches && providerMatches && statusMatches && entityMatches;
   });
 }
 
