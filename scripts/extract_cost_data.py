@@ -7,7 +7,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 
-DEFAULT_WORKBOOK_PATH = os.environ.get("WORKBOOK_PATH")
+DEFAULT_WORKBOOK_PATH = Path(os.environ["WORKBOOK_PATH"]) if os.environ.get("WORKBOOK_PATH") else None
 DEFAULT_OUTPUT_PATH = Path("data/cost-accounts.json")
 HEADER_ROW = 3
 FIRST_DATA_ROW = 4
