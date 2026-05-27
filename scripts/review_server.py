@@ -192,7 +192,10 @@ def build_reviewed_workbook_from_bytes(workbook_bytes, sheet_name, review_rows):
                 data = source_archive.read(item.filename)
                 if item.filename == sheet_path:
                     data = update_verified_cells(data, review_rows)
-                target_archive.writestr(item, data)
+                info = zipfile.ZipInfo(item.filename, date_time=item.date_time)
+                info.compress_type = item.compress_type
+                info.external_attr = item.external_attr
+                target_archive.writestr(info, data)
 
     return output.getvalue()
 
@@ -221,7 +224,7 @@ class ReviewRequestHandler(SimpleHTTPRequestHandler):
             self.send_json(payload)
             return
         if self.path.startswith("/api/review-state"):
-            self.send_json({"overrides": {}, "links": {}, "providerLinks": {}, "memos": {}})
+            self.send_json({"overrides": {}, "links": {}, "providerLinks": {}})
             return
         super().do_GET()
 
@@ -235,6 +238,17 @@ class ReviewRequestHandler(SimpleHTTPRequestHandler):
             self.handle_export_reviewed()
             return
         if self.path == "/api/review-state":
+            length = int(self.headers.get("Content-Length", "0") or 0)
+            try:
+                payload = json.loads(self.rfile.read(length).decode("utf-8")) if length else {}
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                self.send_error(400, "Invalid JSON body")
+                return
+            rows = payload.get("rows", [])
+            has_unverify = any(row.get("verified") is False for row in rows)
+            if has_unverify and not uploader_is_allowed(payload.get("uploader", "")):
+                self.send_error(403, "검수 취소는 권한이 있는 업로더만 가능합니다")
+                return
             self.send_json({"ok": True, "mode": "local"})
             return
         self.send_error(404, "Not found")

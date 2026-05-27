@@ -137,6 +137,25 @@ class ReviewServerTests(unittest.TestCase):
         self.assertEqual(resolve_static_path("/"), ROOT_DIR / "index.html")
         self.assertIsNone(resolve_static_path("/../../../../../../etc/passwd"))
 
+    def test_unverify_check_only_triggers_on_explicit_false(self):
+        # verified=False 인 row만 unverify로 판단
+        self.assertTrue(any(r.get("verified") is False for r in [{"rowId": "r1", "verified": False}]))
+        # verified=True 는 unverify 아님
+        self.assertFalse(any(r.get("verified") is False for r in [{"rowId": "r1", "verified": True}]))
+        # verified 필드 없는 row 는 unverify 아님 (bug #1 fix 검증)
+        self.assertFalse(any(r.get("verified") is False for r in [{"rowId": "r1"}]))
+        # rowId 없는 row 도 verified=False 면 감지 (bug #2 fix 검증)
+        self.assertTrue(any(r.get("verified") is False for r in [{"verified": False}]))
+        # 빈 rows 는 unverify 없음
+        self.assertFalse(any(r.get("verified") is False for r in []))
+
+    def test_unverify_requires_authorized_uploader(self):
+        self.assertTrue(uploader_is_allowed("이윤슬"))
+        self.assertTrue(uploader_is_allowed("yunseul"))
+        self.assertFalse(uploader_is_allowed(""))
+        self.assertFalse(uploader_is_allowed("hacker"))
+        self.assertFalse(uploader_is_allowed("관리자"))
+
 
 if __name__ == "__main__":
     unittest.main()

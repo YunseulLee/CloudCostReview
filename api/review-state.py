@@ -30,13 +30,15 @@ class handler(BaseHTTPRequestHandler):
         if not check_request_ip(self):
             return
         payload = self.read_json()
+        if payload is None:
+            return
         workbook_id = payload.get("workbookId")
         if workbook_id is None:
             self.send_json({"error": "workbookId is required"}, status=400)
             return
 
         rows = payload.get("rows", [])
-        has_unverify = any(not row.get("verified") for row in rows if row.get("rowId"))
+        has_unverify = any(row.get("verified") is False for row in rows)
         if has_unverify and not uploader_is_allowed(payload.get("uploader", "")):
             self.send_json({"error": "검수 취소는 권한이 있는 업로더만 가능합니다"}, status=403)
             return
@@ -64,7 +66,11 @@ class handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", "0") or 0)
         if length == 0:
             return {}
-        return json.loads(self.rfile.read(length).decode("utf-8"))
+        try:
+            return json.loads(self.rfile.read(length).decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self.send_json({"error": "Invalid JSON body"}, status=400)
+            return None
 
     def send_json(self, payload, status=200):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
