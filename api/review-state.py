@@ -10,6 +10,7 @@ if str(ROOT_DIR) not in sys.path:
 
 from lib.ip_guard import check_request_ip
 from lib.supabase_store import get_review_state, save_review_state, supabase_is_configured
+from scripts.review_server import uploader_is_allowed
 
 
 EMPTY_STATE = {"overrides": {}, "links": {}, "providerLinks": {}, "memos": {}}
@@ -33,14 +34,26 @@ class handler(BaseHTTPRequestHandler):
         if workbook_id is None:
             self.send_json({"error": "workbookId is required"}, status=400)
             return
+
+        rows = payload.get("rows", [])
+        has_unverify = any(not row.get("verified") for row in rows if row.get("rowId"))
+        if has_unverify and not uploader_is_allowed(payload.get("uploader", "")):
+            self.send_json({"error": "검수 취소는 권한이 있는 업로더만 가능합니다"}, status=403)
+            return
+
         if not supabase_is_configured() or not workbook_id or workbook_id == "local":
             self.send_json({"ok": True, "mode": "local"})
             return
-        result = save_review_state(
-            workbook_id,
-            payload.get("rows", []),
-            payload.get("providerLinks", {}),
-        )
+        try:
+            result = save_review_state(
+                workbook_id,
+                rows,
+                payload.get("providerLinks", {}),
+            )
+        except Exception as exc:
+            print(f"review-state save error: {exc}", file=sys.stderr)
+            self.send_json({"error": "Failed to save review state"}, status=500)
+            return
         self.send_json(result)
 
     def query_param(self, name):
