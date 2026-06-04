@@ -10,7 +10,6 @@ import {
   formatCurrency,
   buildMonthChartItems,
   getEffectiveEvidenceUrl,
-  getRowsWithMemos,
   getVisibleMonths,
   normalizeExternalUrl,
   uploaderIsAllowed,
@@ -174,29 +173,6 @@ test('normalizeExternalUrl adds https when protocol is missing', () => {
   assert.equal(normalizeExternalUrl(''), '');
 });
 
-test('getRowsWithMemos returns rows that have non-empty review memos', () => {
-  const result = getRowsWithMemos(
-    [
-      { id: 'row-10', rowNumber: 10, account: 'aws-a', provider: 'AWS', costReviewer: 'Kim' },
-      { id: 'row-11', rowNumber: 11, account: 'azure-b', provider: 'Azure', costReviewer: 'Lee' },
-    ],
-    {
-      'row-10': '  check variance  ',
-      'row-11': '   ',
-    },
-  );
-
-  assert.deepEqual(result, [
-    {
-      id: 'row-10',
-      rowNumber: 10,
-      account: 'aws-a',
-      provider: 'AWS',
-      costReviewer: 'Kim',
-      memo: 'check variance',
-    },
-  ]);
-});
 
 test('uiText returns English and Korean labels with Korean fallback', () => {
   assert.equal(uiText('reviewerSearch', 'ko'), '검수자 검색');
@@ -213,7 +189,6 @@ test('uiText returns English and Korean labels with Korean fallback', () => {
   assert.equal(uiText('accountOverrideLink', 'ko'), '상세내역 폴더링크');
   assert.equal(uiText('verifyButton', 'ko'), 'Check');
   assert.equal(uiText('verifySelected', 'ko'), 'Check');
-  assert.equal(uiText('memoPlaceholder', 'ko'), '비용 증감 사유를 작성해주세요.');
   assert.equal(uiText('language', 'ko'), 'Language');
   assert.equal(uiText('uploadOperatorPlaceholder', 'ko'), '');
   assert.equal(uiText('reviewerSearch', 'fr'), '검수자 검색');
@@ -243,17 +218,15 @@ test('buildReviewExportRows returns row numbers and visible verified state for e
   ]);
 });
 
-test('buildReviewStatePayload serializes checks links provider links and memos', () => {
+test('buildReviewStatePayload serializes checks and provider links', () => {
   const result = buildReviewStatePayload({
     workbookId: 'book-1',
     rows,
     overrides: { 'row-4': true, 'row-6': false },
-    links: { 'row-4': 'https://account.example/detail' },
     providerLinks: {
       AWS: 'https://provider.example/aws',
       'folder::AWS': 'https://provider.example/folder',
     },
-    memos: { 'row-6': 'need follow-up' },
   });
 
   assert.deepEqual(result, {
@@ -263,22 +236,11 @@ test('buildReviewStatePayload serializes checks links provider links and memos',
         rowId: 'row-4',
         rowNumber: 4,
         verified: true,
-        accountEvidenceUrl: 'https://account.example/detail',
-        memo: '',
-      },
-      {
-        rowId: 'row-5',
-        rowNumber: 5,
-        verified: true,
-        accountEvidenceUrl: '',
-        memo: '',
       },
       {
         rowId: 'row-6',
         rowNumber: 6,
         verified: false,
-        accountEvidenceUrl: '',
-        memo: 'need follow-up',
       },
     ],
     providerLinks: {

@@ -20,8 +20,10 @@ from scripts.review_server import (
 
 
 def reviewed_filename(original_stem, count):
-    base = re.sub(r'_reviewed(_\d+)?$', '', safe_filename(original_stem))
-    return f"{base}_reviewed_{count}.xlsx"
+    base = re.sub(r'_reviewed.*$', '', original_stem, flags=re.IGNORECASE)
+    # 누적된 (N) 또는 safe_filename이 변환한 _N_ 패턴을 모두 제거
+    base = re.sub(r'(\(\d+\)|_\d+_)+$', '', base).rstrip('_ ')
+    return f"{base}({count}).xlsx"
 
 
 class handler(BaseHTTPRequestHandler):
@@ -51,7 +53,8 @@ class handler(BaseHTTPRequestHandler):
                 data = json.loads(DATA_PATH.read_text(encoding="utf-8"))
                 filename = reviewed_filename(Path(data.get('sourceWorkbook', 'cloud-cost.xlsx')).stem, count)
         except Exception as exc:
-            self.send_error(400, f"Reviewed workbook export failed: {exc}")
+            print(f"export-reviewed error: {exc}", file=sys.stderr)
+            self.send_error(400, "Reviewed workbook export failed")
             return
 
         self.send_response(200)

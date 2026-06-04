@@ -142,7 +142,6 @@ def upload_workbook(filename, workbook_bytes, uploader_name):
         temp_path.unlink(missing_ok=True)
 
     payload["sourceWorkbook"] = storage_path
-    request_json("PATCH", "workbooks", {"is_active": False}, query="is_active=eq.true")
     inserted = request_json(
         "POST",
         "workbooks",
@@ -157,6 +156,12 @@ def upload_workbook(filename, workbook_bytes, uploader_name):
         prefer="return=representation",
     )
     workbook = inserted[0]
+    request_json(
+        "PATCH",
+        "workbooks",
+        {"is_active": False},
+        query=f"is_active=eq.true&id=neq.{quote(str(workbook['id']), safe='')}",
+    )
     payload["workbookId"] = workbook["id"]
     return {
         "ok": True,
@@ -183,7 +188,7 @@ def get_review_state(workbook_id):
     review_rows = request_json(
         "GET",
         "review_states",
-        query=f"workbook_id=eq.{encoded_id}&select=row_id,verified,account_evidence_url,memo",
+        query=f"workbook_id=eq.{encoded_id}&select=row_id,verified,account_evidence_url",
     ) or []
     provider_rows = request_json(
         "GET",
@@ -197,7 +202,6 @@ def get_review_state(workbook_id):
             for row in review_rows
             if row.get("account_evidence_url")
         },
-        "memos": {row["row_id"]: row["memo"] for row in review_rows if row.get("memo")},
         "providerLinks": {row["provider"]: row["url"] for row in provider_rows if row.get("url")},
     }
 
@@ -209,8 +213,6 @@ def save_review_state(workbook_id, rows, provider_links):
             "row_id": row.get("rowId"),
             "row_number": row.get("rowNumber"),
             "verified": bool(row.get("verified")),
-            "account_evidence_url": row.get("accountEvidenceUrl") or None,
-            "memo": row.get("memo") or None,
         }
         for row in rows
         if row.get("rowId")
@@ -218,12 +220,22 @@ def save_review_state(workbook_id, rows, provider_links):
     if review_rows:
         request_json("POST", "review_states", review_rows, prefer="resolution=merge-duplicates,return=minimal")
 
-    provider_rows = [
+    provider_links_dict = provider_links or {}
+    to_upsert = [
         {"workbook_id": workbook_id, "provider": provider, "url": url}
-        for provider, url in (provider_links or {}).items()
+        for provider, url in provider_links_dict.items()
         if provider and url
     ]
-    if provider_rows:
-        request_json("POST", "provider_links", provider_rows, prefer="resolution=merge-duplicates,return=minimal")
+    to_delete = [p for p, url in provider_links_dict.items() if p and not url]
+    if to_upsert:
+        request_json("POST", "provider_links", to_upsert, prefer="resolution=merge-duplicates,return=minimal")
+    if to_delete:
+        encoded_id = quote(str(workbook_id), safe="")
+        for provider in to_delete:
+            request_json(
+                "DELETE",
+                "provider_links",
+                query=f"workbook_id=eq.{encoded_id}&provider=eq.{quote(str(provider), safe='')}",
+            )
 
     return {"ok": True}

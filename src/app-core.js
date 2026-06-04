@@ -15,7 +15,7 @@ const UI_TEXT = {
   showOwner: { ko: 'Owner 보기', en: 'Show Owner' },
   hideRealUsage: { ko: 'Real usage 숨기기', en: 'Hide Real usage' },
   uploadWorkbook: { ko: '월별 엑셀 업로드', en: 'Upload monthly Excel' },
-  uploadOperator: { ko: '업로드 담당자', en: 'Uploader' },
+  uploadOperator: { ko: '패스워드', en: 'Password' },
   uploadOperatorPlaceholder: { ko: '', en: '' },
   uploadLocked: {
     ko: '허용된 담당자만 가능',
@@ -24,11 +24,6 @@ const UI_TEXT = {
   uploadAllowed: { ko: '업로드/초기화/다운로드 가능', en: 'Upload/reset/download allowed' },
   downloadReviewed: { ko: 'K열 반영 엑셀 다운로드', en: 'Download Excel with K updated' },
   clearChecks: { ko: '화면 체크 초기화', en: 'Reset screen checks' },
-  clearMemos: { ko: '메모 전체 삭제', en: 'Delete all memos' },
-  clearMemosComplete: { ko: '모든 검수 메모를 삭제했습니다.', en: 'All review memos have been deleted.' },
-  clearMemosDialogTitle: { ko: '검수 메모 전체 삭제', en: 'Delete All Review Memos' },
-  clearMemosDialogBody: { ko: '작성된 검수 메모를 모두 삭제합니다.\n이 작업은 되돌릴 수 없습니다.', en: 'All review memos will be permanently deleted.\nThis action cannot be undone.' },
-  clearMemosDialogCount: { ko: '개 메모가 삭제됩니다.', en: 'memo(s) will be deleted.' },
   cancel: { ko: '취소', en: 'Cancel' },
   confirmDelete: { ko: '삭제', en: 'Delete' },
   currentShown: { ko: '현재 표시', en: 'Shown' },
@@ -87,14 +82,6 @@ const UI_TEXT = {
   },
   currentUsedLink: { ko: '현재 사용 링크', en: 'Current link' },
   none: { ko: '없음', en: 'None' },
-  reviewMemo: { ko: '검수 메모', en: 'Review Memo' },
-  memoOverview: { ko: '검수 메모 모아보기', en: 'Review Memo Overview' },
-  memoOverviewCount: { ko: '개 메모', en: 'memos' },
-  noReviewMemos: { ko: '저장된 검수 메모가 없습니다.', en: 'No review memos saved.' },
-  memoPlaceholder: {
-    ko: '비용 증감 사유를 작성해주세요.',
-    en: 'Add notes for mismatched amounts or follow-up items.',
-  },
   rowsShown: { ko: '개 계정 표시 중', en: 'accounts shown' },
   uploadInProgress: { ko: '업로드 중입니다.', en: 'is uploading.' },
   uploadFailed: { ko: '업로드 실패', en: 'Upload failed' },
@@ -103,10 +90,11 @@ const UI_TEXT = {
   downloadFailed: { ko: '엑셀 다운로드 실패', en: 'Excel download failed' },
   downloadComplete: { ko: 'K열 반영 엑셀을 다운로드했습니다.', en: 'Downloaded Excel with K updates.' },
   resetComplete: {
-    ko: '화면의 모든 체크를 초기화했습니다. 공유링크와 메모는 유지됩니다.',
-    en: 'All visible check marks were reset. Detail links and memos are preserved.',
+    ko: '화면의 모든 체크를 초기화했습니다. 공유링크는 유지됩니다.',
+    en: 'All visible check marks were reset. Detail links are preserved.',
   },
   loadFailed: { ko: '데이터를 불러오지 못했습니다.', en: 'Could not load data.' },
+  saveFailed: { ko: '저장 실패 — 다음 변경 시 재시도됩니다.', en: 'Save failed — will retry on next change.' },
   topMetaW: { ko: 'W열 현재 비용', en: 'Current cost in W' },
   topMeta12: { ko: '12개월 비교', en: '12-month comparison' },
   language: { ko: 'Language', en: 'Language' },
@@ -145,14 +133,6 @@ export function rowIsLocallyVerified(row) {
   return row?.locallyVerified === true;
 }
 
-export function getRowsWithMemos(rows, memos = {}) {
-  return rows
-    .map((row) => ({
-      ...row,
-      memo: String(memos[row.id] || '').trim(),
-    }))
-    .filter((row) => row.memo);
-}
 
 export function applyVerificationOverrides(rows, overrides = {}) {
   return rows.map((row) => {
@@ -280,8 +260,11 @@ export function normalizeExternalUrl(url) {
   if (!value) {
     return '';
   }
-  if (/^[a-z][a-z\d+.-]*:/i.test(value)) {
+  if (/^https?:/i.test(value)) {
     return value;
+  }
+  if (/^[a-z][a-z\d+.-]*:/i.test(value)) {
+    return '';
   }
   return `https://${value}`;
 }
@@ -299,23 +282,21 @@ export function buildReviewStatePayload({
   workbookId,
   rows,
   overrides = {},
-  links = {},
   providerLinks = {},
-  memos = {},
 }) {
   return {
     workbookId,
-    rows: rows.map((row) => ({
-      rowId: row.id,
-      rowNumber: Number(row.rowNumber),
-      verified: overrides[row.id] === true ? true : overrides[row.id] === false ? false : rowIsVerified(row),
-      accountEvidenceUrl: String(links[row.id] || '').trim(),
-      memo: String(memos[row.id] || '').trim(),
-    })),
+    rows: rows
+      .filter((row) => overrides[row.id] !== undefined)
+      .map((row) => ({
+        rowId: row.id,
+        rowNumber: Number(row.rowNumber),
+        verified: overrides[row.id] === true,
+      })),
     providerLinks: Object.fromEntries(
       Object.entries(providerLinks)
         .map(([provider, url]) => [provider, String(url || '').trim()])
-        .filter(([provider, url]) => normalizeText(provider) && normalizeText(url)),
+        .filter(([provider]) => normalizeText(provider)),
     ),
   };
 }

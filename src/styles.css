@@ -64,7 +64,7 @@ select {
   grid-template-columns: repeat(14, minmax(0, 1fr));
   grid-template-areas:
     "language language reviewer reviewer reviewer provider provider status status recent realusage . kpis kpis"
-    "upload upload uploader uploader uploader permission permission clearmemos reset export owner owner kpis kpis";
+    "upload upload uploader uploader uploader permission permission reset export owner owner . kpis kpis";
   align-items: center;
   gap: 10px 12px;
   padding: 10px 18px;
@@ -129,10 +129,6 @@ select {
 
 #clear-local {
   grid-area: reset;
-}
-
-#clear-memos {
-  grid-area: clearmemos;
 }
 
 #download-reviewed {
@@ -661,15 +657,6 @@ button:disabled {
 }
 
 .evidence-box input,
-.memo-box textarea {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 8px 9px;
-  color: var(--ink);
-  font-size: 12px;
-}
-
 .link-open-button {
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -687,63 +674,6 @@ button:disabled {
   color: var(--muted);
   cursor: not-allowed;
   opacity: 0.55;
-}
-
-.memo-box textarea {
-  min-height: 74px;
-  resize: vertical;
-}
-
-.memo-overview-list {
-  display: grid;
-  gap: 8px;
-  max-height: 220px;
-  overflow: auto;
-  padding: 12px;
-}
-
-.memo-list-item {
-  display: grid;
-  gap: 3px;
-  width: 100%;
-  min-width: 0;
-  padding: 9px;
-  border: 1px solid var(--line-soft);
-  border-radius: 6px;
-  background: #fff;
-  color: var(--ink);
-  text-align: left;
-  cursor: pointer;
-}
-
-.memo-list-item:hover {
-  border-color: #9ab8d9;
-  background: #f6faff;
-}
-
-.memo-account,
-.memo-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.memo-account {
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.memo-meta {
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.memo-text {
-  color: #2e4050;
-  font-size: 11px;
 }
 
 .hint {
@@ -780,7 +710,7 @@ button:disabled {
       "reviewer reviewer provider status"
       "language recent realusage owner"
       "upload upload uploader permission"
-      "kpis clearmemos reset export";
+      "kpis reset export .";
   }
 
   .workspace {
@@ -798,7 +728,7 @@ button:disabled {
     grid-template-areas:
       "reviewer reviewer reviewer provider provider status status language"
       "recent realusage upload upload uploader uploader permission permission"
-      "owner kpis kpis kpis kpis clearmemos reset export";
+      "owner kpis kpis kpis kpis . reset export";
   }
 }
 
@@ -833,7 +763,6 @@ button:disabled {
       "permission"
       "kpis"
       "reset"
-      "clearmemos"
       "export";
   }
 
