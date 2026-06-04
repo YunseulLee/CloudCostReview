@@ -13,7 +13,7 @@ from lib.supabase_store import get_review_state, save_review_state, supabase_is_
 from scripts.review_server import uploader_is_allowed
 
 
-EMPTY_STATE = {"overrides": {}, "links": {}, "providerLinks": {}, "memos": {}}
+EMPTY_STATE = {"overrides": {}, "links": {}, "providerLinks": {}}
 
 
 class handler(BaseHTTPRequestHandler):

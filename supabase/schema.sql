@@ -24,7 +24,6 @@ create table if not exists public.review_states (
   row_number integer not null,
   verified boolean not null default false,
   account_evidence_url text,
-  memo text,
   updated_at timestamptz not null default now(),
   primary key (workbook_id, row_id)
 );

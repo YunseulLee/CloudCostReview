@@ -8,7 +8,6 @@ import {
   formatCurrency,
   formatRate,
   getEffectiveEvidenceUrl,
-  getRowsWithMemos,
   getUniqueProviders,
   getVisibleMonths,
   normalizeExternalUrl,
@@ -27,17 +26,22 @@ const state = {
   filteredRows: [],
   selectedId: null,
   overrides: {},
-  links: {},
+  localOverrides: {},
+  dbOverrides: {},
+  dbLinks: {},
   providerLinks: {},
-  memos: {},
+  dbProviderLinks: {},
   language: 'ko',
   uploaderName: '',
   workbookId: null,
+
   remoteReviewEnabled: false,
   downloadCount: 0,
 };
 
 let remoteSaveTimer = null;
+let saveInFlight = false;
+let pendingRemoteSave = false;
 
 const els = {
   sheetName: document.querySelector('#sheet-name'),
@@ -53,7 +57,6 @@ const els = {
   uploadPermissionStatus: document.querySelector('#upload-permission-status'),
   kpiStrip: document.querySelector('#kpi-strip'),
   clearLocal: document.querySelector('#clear-local'),
-  clearMemos: document.querySelector('#clear-memos'),
   downloadReviewed: document.querySelector('#download-reviewed'),
   confirmModal: document.querySelector('#confirm-modal'),
   modalTitle: document.querySelector('#modal-title'),
@@ -74,17 +77,9 @@ const els = {
 function loadLocalState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    state.overrides = saved.overrides || {};
-    state.links = saved.links || {};
-    state.providerLinks = saved.providerLinks || {};
-    state.memos = saved.memos || {};
     state.language = saved.language || 'ko';
     state.uploaderName = saved.uploaderName || '';
   } catch {
-    state.overrides = {};
-    state.links = {};
-    state.providerLinks = {};
-    state.memos = {};
     state.language = 'ko';
     state.uploaderName = '';
   }
@@ -94,12 +89,10 @@ function saveLocalState(syncRemote = true) {
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({
-      overrides: state.overrides,
-      links: state.links,
-      providerLinks: state.providerLinks,
-      memos: state.memos,
       language: state.language,
       uploaderName: state.uploaderName,
+      providerLinksWorkbookId: state.workbookId,
+      providerLinks: state.providerLinks,
     }),
   );
   if (syncRemote) {
@@ -126,7 +119,6 @@ function updateUploadPermission() {
   const allowed = canManageProtectedActions(state.uploaderName);
   els.workbookUpload.disabled = !allowed;
   els.clearLocal.disabled = !allowed;
-  els.clearMemos.disabled = !allowed;
   els.downloadReviewed.disabled = !allowed;
   els.workbookUpload.closest('.upload-control')?.classList.toggle('disabled', !allowed);
   els.uploadPermissionStatus.textContent = allowed ? t('uploadAllowed') : t('uploadLocked');
@@ -136,20 +128,23 @@ function updateUploadPermission() {
 function resetReviewState({ preserveProviderLinks = false } = {}) {
   const providerLinks = preserveProviderLinks ? { ...state.providerLinks } : {};
   state.overrides = {};
-  state.links = {};
+  state.localOverrides = {};
+  state.dbOverrides = {};
+  state.dbLinks = {};
+  state.dbProviderLinks = {};
   state.providerLinks = providerLinks;
-  state.memos = {};
   saveLocalState();
 }
 
 function effectiveRows() {
-  return applyVerificationOverrides(state.rows, state.overrides).map((row) => ({
+  const merged = { ...state.dbOverrides, ...state.localOverrides, ...state.overrides };
+  const mergedProviderLinks = { ...state.dbProviderLinks, ...state.providerLinks };
+  return applyVerificationOverrides(state.rows, merged).map((row) => ({
     ...row,
-    evidenceUrl: getEffectiveEvidenceUrl(row, state.links, state.providerLinks),
-    accountEvidenceUrl: state.links[row.id] || '',
-    providerEvidenceUrl: state.providerLinks[row.provider] || '',
-    providerFolderEvidenceUrl: state.providerLinks[providerFolderKey(row.provider)] || '',
-    memo: state.memos[row.id] || '',
+    evidenceUrl: getEffectiveEvidenceUrl(row, state.dbLinks, mergedProviderLinks),
+    accountEvidenceUrl: state.dbLinks[row.id] || '',
+    providerEvidenceUrl: mergedProviderLinks[row.provider] || '',
+    providerFolderEvidenceUrl: mergedProviderLinks[providerFolderKey(row.provider)] || '',
   }));
 }
 
@@ -176,6 +171,7 @@ function renderProviderOptions(rows) {
 }
 
 function renderTableHead() {
+  if (!state.data) return;
   const visibleMonths = getVisibleMonths(state.data.monthColumns, els.recentMonthsOnly.checked);
   const ownerVisible = els.showOwnerColumn.checked;
   const tableWidth = (els.recentMonthsOnly.checked ? 1460 : 1900) - (ownerVisible ? 0 : 140);
@@ -283,7 +279,6 @@ function renderDetail() {
     els.detailSubtitle.textContent = t('selectAccountHelp');
     els.detailBody.innerHTML = `
       <div class="empty-state">${t('emptyDetail')}</div>
-      ${memoOverviewTemplate()}
     `;
     els.openEvidence.disabled = true;
     els.verifySelected.disabled = true;
@@ -306,7 +301,7 @@ function renderDetail() {
   const bars = chartItems
     .map((month) => {
       return `
-        <div class="chart-column" title="${escapeAttr(month.header)}: ${month.valueLabel}">
+        <div class="chart-column" title="${escapeAttr(month.header)}: ${escapeAttr(month.valueLabel)}">
           <span class="bar-value" style="display:block;color:#111827;font-size:11px;font-weight:800;line-height:1.15;text-align:center;white-space:nowrap;overflow:visible;">${escapeHtml(month.valueLabel)}</span>
           <div class="bar-wrap">
             <div class="bar ${month.isCurrent ? 'current' : ''}" style="height:${month.height}%"></div>
@@ -350,38 +345,24 @@ function renderDetail() {
       </div>
     </section>
 
-    <section class="detail-card memo-box">
-      <h2>${t('reviewMemo')}</h2>
-      <div class="evidence-box">
-        <textarea id="memo-input" placeholder="${escapeAttr(t('memoPlaceholder'))}">${escapeHtml(row.memo)}</textarea>
-      </div>
-    </section>
-
-    ${memoOverviewTemplate()}
   `;
 
   document.querySelector('#provider-evidence-url-input').addEventListener('input', (event) => {
     const value = event.target.value.trim();
-    if (value) {
-      state.providerLinks[row.provider] = value;
-    } else {
-      delete state.providerLinks[row.provider];
-    }
+    state.providerLinks[row.provider] = value;
     saveLocalState();
-    els.openEvidence.disabled = !getEffectiveEvidenceUrl(row, state.links, state.providerLinks);
+    const mergedProviderLinks = { ...state.dbProviderLinks, ...state.providerLinks };
+    els.openEvidence.disabled = !getEffectiveEvidenceUrl(row, state.dbLinks, mergedProviderLinks);
     document.querySelector('#open-provider-evidence').disabled = !value;
   });
   document.querySelector('#provider-evidence-url-input').addEventListener('change', render);
   document.querySelector('#evidence-url-input').addEventListener('input', (event) => {
     const value = event.target.value.trim();
     const folderKey = providerFolderKey(row.provider);
-    if (value) {
-      state.providerLinks[folderKey] = value;
-    } else {
-      delete state.providerLinks[folderKey];
-    }
+    state.providerLinks[folderKey] = value;
     saveLocalState();
-    els.openEvidence.disabled = !getEffectiveEvidenceUrl(row, state.links, state.providerLinks);
+    const mergedProviderLinks = { ...state.dbProviderLinks, ...state.providerLinks };
+    els.openEvidence.disabled = !getEffectiveEvidenceUrl(row, state.dbLinks, mergedProviderLinks);
     document.querySelector('#open-account-evidence').disabled = !value;
   });
   document.querySelector('#evidence-url-input').addEventListener('change', render);
@@ -397,48 +378,6 @@ function renderDetail() {
       window.open(normalizeExternalUrl(url), '_blank', 'noopener,noreferrer');
     }
   });
-  document.querySelector('#memo-input').addEventListener('input', (event) => {
-    state.memos[row.id] = event.target.value;
-    saveLocalState();
-    renderMemoOverview();
-  });
-}
-
-function memoOverviewTemplate() {
-  const rowsWithMemos = getRowsWithMemos(effectiveRows(), state.memos);
-  const countLabel =
-    state.language === 'ko'
-      ? `${rowsWithMemos.length}${t('memoOverviewCount')}`
-      : `${rowsWithMemos.length} ${t('memoOverviewCount')}`;
-  const body = rowsWithMemos.length
-    ? rowsWithMemos
-        .map(
-          (row) => `
-            <button class="memo-list-item" type="button" data-memo-row-id="${escapeAttr(row.id)}">
-              <span class="memo-account">${escapeHtml(row.account || '(계정명 없음)')}</span>
-              <span class="memo-meta">${escapeHtml(row.provider || '-')} · ${escapeHtml(row.costReviewer || '-')} · Row ${escapeHtml(row.rowNumber || '-')}</span>
-              <span class="memo-text">${escapeHtml(row.memo)}</span>
-            </button>
-          `,
-        )
-        .join('')
-    : `<div class="empty-state compact">${t('noReviewMemos')}</div>`;
-
-  return `
-    <section class="detail-card memo-overview-card">
-      <h2><span>${t('memoOverview')}</span><b>${countLabel}</b></h2>
-      <div id="memo-overview-list" class="memo-overview-list">${body}</div>
-    </section>
-  `;
-}
-
-function renderMemoOverview() {
-  const container = document.querySelector('.memo-overview-card');
-  if (container) {
-    const tmp = document.createElement('div');
-    tmp.innerHTML = memoOverviewTemplate();
-    container.innerHTML = tmp.querySelector('.memo-overview-card').innerHTML;
-  }
 }
 
 function render() {
@@ -514,6 +453,12 @@ async function loadData() {
   state.data = await response.json();
   state.rows = state.data.rows;
   state.workbookId = state.data.workbookId || 'local';
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    if (saved.providerLinksWorkbookId === state.workbookId && saved.providerLinks) {
+      state.providerLinks = { ...saved.providerLinks };
+    }
+  } catch { /* ignore */ }
   state.selectedId = state.rows[0]?.id || null;
   els.sheetName.textContent = state.data.sheetName;
   await loadReviewState();
@@ -521,6 +466,9 @@ async function loadData() {
 
 async function loadReviewState() {
   state.remoteReviewEnabled = false;
+  state.dbOverrides = {};
+  state.dbLinks = {};
+  state.dbProviderLinks = {};
   if (!state.workbookId || state.workbookId === 'local') {
     return;
   }
@@ -533,12 +481,14 @@ async function loadReviewState() {
       return;
     }
     const remoteState = await response.json();
-    state.overrides = remoteState.overrides || {};
-    state.links = remoteState.links || {};
-    state.providerLinks = remoteState.providerLinks || {};
-    state.memos = remoteState.memos || {};
+    state.dbOverrides = remoteState.overrides || {};
+    state.dbLinks = remoteState.links || {};
+    state.dbProviderLinks = remoteState.providerLinks || {};
     state.remoteReviewEnabled = true;
     saveLocalState(false);
+    if (Object.values(state.providerLinks).some(Boolean)) {
+      scheduleRemoteStateSave();
+    }
   } catch {
     state.remoteReviewEnabled = false;
   }
@@ -553,16 +503,19 @@ function scheduleRemoteStateSave() {
 }
 
 async function saveRemoteReviewState() {
+  if (saveInFlight) {
+    pendingRemoteSave = true;
+    return;
+  }
   if (!state.remoteReviewEnabled || !state.workbookId) {
     return;
   }
+  saveInFlight = true;
   const payload = buildReviewStatePayload({
     workbookId: state.workbookId,
     rows: state.rows,
     overrides: state.overrides,
-    links: state.links,
     providerLinks: state.providerLinks,
-    memos: state.memos,
   });
   try {
     const response = await fetch('/api/review-state', {
@@ -570,9 +523,17 @@ async function saveRemoteReviewState() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    state.remoteReviewEnabled = response.ok;
+    if (!response.ok) {
+      els.resultSummary.textContent = t('saveFailed');
+    }
   } catch {
-    state.remoteReviewEnabled = false;
+    els.resultSummary.textContent = t('saveFailed');
+  } finally {
+    saveInFlight = false;
+    if (pendingRemoteSave) {
+      pendingRemoteSave = false;
+      scheduleRemoteStateSave();
+    }
   }
 }
 
@@ -597,7 +558,6 @@ async function uploadWorkbook(file) {
   }
 
   els.resultSummary.textContent = `${file.name} ${t('uploadInProgress')}`;
-  const preservedProviderLinks = { ...state.providerLinks };
   const formData = new FormData();
   formData.append('workbook', file);
   formData.append('uploader', state.uploaderName);
@@ -613,7 +573,6 @@ async function uploadWorkbook(file) {
 
   const result = await response.json();
   await loadData();
-  state.providerLinks = { ...preservedProviderLinks, ...state.providerLinks };
   resetReviewState({ preserveProviderLinks: true });
   resetProviderOptions();
   renderProviderOptions(state.rows);
@@ -701,8 +660,10 @@ els.clearLocal.addEventListener('click', () => {
     els.resultSummary.textContent = t('uploadLocked');
     return;
   }
-  state.overrides = Object.fromEntries(state.rows.map((row) => [row.id, false]));
-  saveLocalState();
+  state.localOverrides = Object.fromEntries(state.rows.map((row) => [row.id, false]));
+  state.overrides = {};
+  state.dbOverrides = {};
+  saveLocalState(false);
   render();
   els.resultSummary.textContent = t('resetComplete');
 });
@@ -727,24 +688,6 @@ els.confirmModal.addEventListener('click', (event) => {
   }
 });
 
-els.clearMemos.addEventListener('click', () => {
-  if (!canManageProtectedActions(state.uploaderName)) {
-    els.resultSummary.textContent = t('uploadLocked');
-    return;
-  }
-  const count = Object.values(state.memos).filter((m) => String(m).trim()).length;
-  openConfirmModal({
-    title: t('clearMemosDialogTitle'),
-    body: `${count}${t('clearMemosDialogCount')}\n${t('clearMemosDialogBody').split('\n')[1]}`,
-    onConfirm: () => {
-      state.memos = {};
-      saveLocalState();
-      scheduleRemoteStateSave();
-      render();
-      els.resultSummary.textContent = t('clearMemosComplete');
-    },
-  });
-});
 els.downloadReviewed.addEventListener('click', async () => {
   try {
     await downloadReviewedWorkbook();
@@ -771,15 +714,6 @@ els.tableBody.addEventListener('click', (event) => {
   }
 
   state.selectedId = rowId;
-  render();
-});
-
-els.detailBody.addEventListener('click', (event) => {
-  const memoItem = event.target.closest('[data-memo-row-id]');
-  if (!memoItem) {
-    return;
-  }
-  state.selectedId = memoItem.dataset.memoRowId;
   render();
 });
 
