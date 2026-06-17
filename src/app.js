@@ -349,6 +349,12 @@ function renderDetail() {
 
   document.querySelector('#provider-evidence-url-input').addEventListener('input', (event) => {
     const value = event.target.value.trim();
+    const previous = state.dbProviderLinks[row.provider] || state.providerLinks[row.provider] || '';
+    if (!value && previous && !canManageProtectedActions(state.uploaderName)) {
+      event.target.value = previous;
+      els.resultSummary.textContent = t('linkDeleteDenied');
+      return;
+    }
     state.providerLinks[row.provider] = value;
     saveLocalState();
     const mergedProviderLinks = { ...state.dbProviderLinks, ...state.providerLinks };
@@ -359,6 +365,12 @@ function renderDetail() {
   document.querySelector('#evidence-url-input').addEventListener('input', (event) => {
     const value = event.target.value.trim();
     const folderKey = providerFolderKey(row.provider);
+    const previous = state.dbProviderLinks[folderKey] || state.providerLinks[folderKey] || '';
+    if (!value && previous && !canManageProtectedActions(state.uploaderName)) {
+      event.target.value = previous;
+      els.resultSummary.textContent = t('linkDeleteDenied');
+      return;
+    }
     state.providerLinks[folderKey] = value;
     saveLocalState();
     const mergedProviderLinks = { ...state.dbProviderLinks, ...state.providerLinks };

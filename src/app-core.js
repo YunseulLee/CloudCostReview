@@ -95,6 +95,7 @@ const UI_TEXT = {
   },
   loadFailed: { ko: '데이터를 불러오지 못했습니다.', en: 'Could not load data.' },
   saveFailed: { ko: '저장 실패 — 다음 변경 시 재시도됩니다.', en: 'Save failed — will retry on next change.' },
+  linkDeleteDenied: { ko: '링크 삭제는 패스워드 입력 후 가능합니다.', en: 'Password required to delete a link.' },
   topMetaW: { ko: 'W열 현재 비용', en: 'Current cost in W' },
   topMeta12: { ko: '12개월 비교', en: '12-month comparison' },
   language: { ko: 'Language', en: 'Language' },
