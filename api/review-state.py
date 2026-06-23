@@ -8,8 +8,8 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from lib.ip_guard import check_request_ip
-from lib.supabase_store import get_review_state, save_review_state, supabase_is_configured
+from lib.ip_guard import check_request_ip, get_client_ip
+from lib.supabase_store import get_review_state, log_action, save_review_state, supabase_is_configured
 from scripts.review_server import uploader_is_allowed
 
 
@@ -56,6 +56,14 @@ class handler(BaseHTTPRequestHandler):
             print(f"review-state save error: {exc}", file=sys.stderr)
             self.send_json({"error": "Failed to save review state"}, status=500)
             return
+        uploader = payload.get("uploader", "")
+        client_ip = get_client_ip(self)
+        verified_rows = [r for r in rows if r.get("verified") is True]
+        unverified_rows = [r for r in rows if r.get("verified") is False]
+        if verified_rows:
+            log_action(workbook_id, "verify", uploader, {"rows": len(verified_rows), "ip": client_ip})
+        if unverified_rows:
+            log_action(workbook_id, "unverify", uploader, {"rows": len(unverified_rows), "ip": client_ip})
         self.send_json(result)
 
     def query_param(self, name):

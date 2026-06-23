@@ -8,8 +8,8 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from lib.ip_guard import check_request_ip
-from lib.supabase_store import download_workbook_bytes, get_active_workbook, supabase_is_configured
+from lib.ip_guard import check_request_ip, get_client_ip
+from lib.supabase_store import download_workbook_bytes, get_active_workbook, log_action, supabase_is_configured
 from scripts.review_server import (
     DATA_PATH,
     build_reviewed_workbook,
@@ -56,6 +56,10 @@ class handler(BaseHTTPRequestHandler):
             print(f"export-reviewed error: {exc}", file=sys.stderr)
             self.send_error(400, "Reviewed workbook export failed")
             return
+
+        uploader = payload.get("uploader", "")
+        workbook_id = get_active_workbook().get("id") if supabase_is_configured() else None
+        log_action(workbook_id, "export", uploader, {"filename": filename, "ip": get_client_ip(self)})
 
         self.send_response(200)
         self.send_header(

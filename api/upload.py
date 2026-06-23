@@ -9,8 +9,8 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from lib.ip_guard import check_request_ip
-from lib.supabase_store import supabase_is_configured, upload_workbook
+from lib.ip_guard import check_request_ip, get_client_ip
+from lib.supabase_store import log_action, supabase_is_configured, upload_workbook
 from scripts.review_server import process_uploaded_workbook, uploader_is_allowed
 
 
@@ -50,6 +50,10 @@ class handler(BaseHTTPRequestHandler):
             self.send_error(400, f"Workbook upload failed: {exc}")
             return
 
+        log_action(result.get("workbookId"), "upload", uploader_name, {
+            "filename": file_item.filename,
+            "ip": get_client_ip(self),
+        })
         self.send_json(result)
 
     def send_json(self, payload, status=200):

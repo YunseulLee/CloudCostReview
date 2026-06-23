@@ -239,3 +239,22 @@ def save_review_state(workbook_id, rows, provider_links):
             )
 
     return {"ok": True}
+
+
+def log_action(workbook_id, action, actor, details=None):
+    if not supabase_is_configured():
+        return
+    try:
+        request_json(
+            "POST",
+            "review_audit_logs",
+            {
+                "workbook_id": workbook_id,
+                "action": action,
+                "actor": str(actor or ""),
+                "details": details or {},
+            },
+            prefer="return=minimal",
+        )
+    except Exception:
+        pass
